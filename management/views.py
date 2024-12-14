@@ -11,6 +11,7 @@ from django.contrib.auth.models import User
 from datetime import datetime, timedelta
 import os
 from django.db import transaction  # Add this import at the top
+from django.db.models.functions import TruncMonth
 
 def login_view(request):
     if request.user.is_authenticated:
@@ -152,11 +153,13 @@ def get_recent_activities():
 
 @login_required(login_url='admin_login')
 def admin_dashboard(request):
+    # Existing statistics
     total_customers = Customer.objects.count()
     active_customers = Customer.objects.filter(status='approved').count()
     pending_applications = Customer.objects.filter(status='pending').count()
     total_revenue = Payment.objects.aggregate(total=Sum('amount'))['total'] or 0
 
+    # Get recent data
     recent_applications = Customer.objects.filter(
         status='pending'
     ).order_by('-application_date')[:5]
@@ -165,6 +168,45 @@ def admin_dashboard(request):
         'bill', 'bill__customer'
     ).order_by('-payment_date')[:5]
 
+    # Revenue trend data (last 6 months)
+    today = timezone.now()
+    six_months_ago = today - timedelta(days=180)
+    monthly_revenue = (
+        Payment.objects
+        .filter(payment_date__gte=six_months_ago)
+        .annotate(month=TruncMonth('payment_date'))
+        .values('month')
+        .annotate(total=Sum('amount'))
+        .order_by('month')
+    )
+
+    revenue_labels = [entry['month'].strftime('%B %Y') for entry in monthly_revenue]
+    revenue_data = [float(entry['total']) for entry in monthly_revenue]
+
+    # Customer distribution by plan
+    plan_distribution = (
+        Customer.objects
+        .filter(status='approved')
+        .values('plan__name')
+        .annotate(count=Count('id'))
+        .order_by('-count')
+    )
+
+    plan_labels = [entry['plan__name'] for entry in plan_distribution]
+    plan_data = [entry['count'] for entry in plan_distribution]
+
+    # Payment method distribution
+    payment_methods = (
+        Payment.objects
+        .values('payment_method')
+        .annotate(count=Count('id'))
+        .order_by('-count')
+    )
+
+    payment_method_labels = [entry['payment_method'].replace('_', ' ').title() 
+                           for entry in payment_methods]
+    payment_method_data = [entry['count'] for entry in payment_methods]
+
     context = {
         'total_customers': total_customers,
         'active_customers': active_customers,
@@ -172,6 +214,13 @@ def admin_dashboard(request):
         'total_revenue': total_revenue,
         'recent_applications': recent_applications,
         'recent_payments': recent_payments,
+        # Chart data
+        'revenue_labels': revenue_labels,
+        'revenue_data': revenue_data,
+        'plan_labels': plan_labels,
+        'plan_data': plan_data,
+        'payment_method_labels': payment_method_labels,
+        'payment_method_data': payment_method_data,
     }
     return render(request, 'admin_dashboard.html', context)
 
