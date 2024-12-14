@@ -14,7 +14,9 @@
                         <div class="col-md-8">
                             <h4 class="mb-1">Welcome back, {{ user.get_full_name }}!</h4>
                             <p class="mb-0">
-                                {% if customer.status == 'approved' %}
+                                {% if not customer.plan %}
+                                    Please apply for a plan to start enjoying our services.
+                                {% elif customer.status == 'approved' %}
                                     Your subscription is active. Enjoy your entertainment!
                                 {% elif customer.status == 'pending' %}
                                     Your application is under review. We'll notify you soon.
