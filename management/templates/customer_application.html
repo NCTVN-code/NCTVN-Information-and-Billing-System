@@ -1,0 +1,171 @@
+{% extends 'management_base.html' %}
+{% load static %}
+
+{% block title %}Review Application - {{ customer.user.get_full_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">Application Review</h6>
+                    <span class="badge bg-warning">Pending Review</span>
+                </div>
+                <div class="card-body">
+                    <!-- Customer Information -->
+                    <div class="mb-4">
+                        <h5 class="mb-3">Customer Information</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Name:</strong> {{ customer.user.get_full_name }}</p>
+                                <p><strong>Email:</strong> {{ customer.user.email }}</p>
+                                <p><strong>Phone:</strong> {{ customer.phone }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Application Date:</strong> {{ customer.application_date|date:"M d, Y" }}</p>
+                                <p><strong>Selected Plan:</strong> {{ customer.plan.name|default:"No Plan Selected" }}</p>
+                                <p><strong>Status:</strong> {{ customer.status|title }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Address Information -->
+                    <div class="mb-4">
+                        <h5 class="mb-3">Address Information</h5>
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                {{ customer.address }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Selected Plan Details -->
+                    {% if customer.plan %}
+                    <div class="mb-4">
+                        <h5 class="mb-3">Selected Plan Details</h5>
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <p><strong>Plan Name:</strong> {{ customer.plan.name }}</p>
+                                        <p><strong>Price:</strong> ${{ customer.plan.price|floatformat:2 }}/month</p>
+                                        <p><strong>Channels:</strong> {{ customer.plan.channels }}</p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <p><strong>Features:</strong></p>
+                                        <div class="card">
+                                            <div class="card-body">
+                                                {{ customer.plan.features|linebreaks }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Application Actions -->
+                    <form method="POST">
+                        {% csrf_token %}
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <button type="submit" name="action" value="approve" class="btn btn-success btn-block w-100 mb-3">
+                                    <i class="fas fa-check me-2"></i>Approve Application
+                                </button>
+                            </div>
+                            <div class="col-md-6">
+                                <button type="submit" name="action" value="reject" class="btn btn-danger btn-block w-100 mb-3">
+                                    <i class="fas fa-times me-2"></i>Reject Application
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Application Timeline -->
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Application Timeline</h6>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-primary"></div>
+                            <div class="timeline-content">
+                                <h6 class="timeline-title">Application Submitted</h6>
+                                <p class="timeline-date">{{ customer.application_date|date:"M d, Y H:i" }}</p>
+                            </div>
+                        </div>
+                        {% if customer.status != 'pending' %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker {% if customer.status == 'approved' %}bg-success{% else %}bg-danger{% endif %}"></div>
+                            <div class="timeline-content">
+                                <h6 class="timeline-title">Application {{ customer.status|title }}</h6>
+                                <p class="timeline-date">{{ customer.updated_at|date:"M d, Y H:i" }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .timeline {
+        position: relative;
+        padding: 20px 0;
+    }
+    
+    .timeline-item {
+        position: relative;
+        padding-left: 40px;
+        margin-bottom: 20px;
+    }
+    
+    .timeline-marker {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+    }
+    
+    .timeline-content {
+        padding-bottom: 20px;
+        border-bottom: 1px solid #e3e6f0;
+    }
+    
+    .timeline-title {
+        margin-bottom: 5px;
+    }
+    
+    .timeline-date {
+        color: #858796;
+        font-size: 0.875rem;
+        margin-bottom: 0;
+    }
+    
+    .timeline-item:last-child .timeline-content {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+    
+    .timeline:before {
+        content: '';
+        position: absolute;
+        left: 7px;
+        top: 0;
+        height: 100%;
+        width: 1px;
+        background: #e3e6f0;
+    }
+</style>
+{% endblock %} 

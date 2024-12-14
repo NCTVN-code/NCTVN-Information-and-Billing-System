@@ -1,0 +1,326 @@
+{% extends 'management_base.html' %}
+{% load static %}
+
+{% block title %}Cable Plans - Cable TV Network{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Heading -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Cable TV Plans</h1>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addPlanModal">
+            <i class="fas fa-plus me-2"></i>Add New Plan
+        </button>
+    </div>
+
+    <div class="row">
+        {% for plan in plans %}
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="card plan-card h-100">
+                <div class="card-header border-0 bg-transparent pt-4 pb-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="plan-name mb-0">{{ plan.name }}</h5>
+                        <div class="dropdown">
+                            <button class="btn btn-link text-muted" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                    <a class="dropdown-item" href="#" data-bs-toggle="modal" 
+                                       data-bs-target="#editPlanModal" 
+                                       data-plan-id="{{ plan.id }}"
+                                       data-plan-name="{{ plan.name }}"
+                                       data-plan-description="{{ plan.description }}"
+                                       data-plan-price="{{ plan.price }}"
+                                       data-plan-channels="{{ plan.channels }}"
+                                       data-plan-features="{{ plan.features }}">
+                                        <i class="fas fa-edit me-2"></i>Edit
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" 
+                                       data-bs-target="#deletePlanModal"
+                                       data-plan-id="{{ plan.id }}"
+                                       data-plan-name="{{ plan.name }}">
+                                        <i class="fas fa-trash-alt me-2"></i>Delete
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <h2 class="price mb-0">₱{{ plan.price|floatformat:2 }}</h2>
+                        <small class="text-muted">per month</small>
+                    </div>
+                    <p class="card-text text-center text-muted mb-4">{{ plan.description }}</p>
+                    <div class="plan-features">
+                        <div class="mb-3 text-center">
+                            <span class="badge bg-primary bg-opacity-75 fs-6 py-2 px-3 rounded-pill">
+                                <i class="fas fa-tv me-2"></i>
+                                {{ plan.channels }} Channels
+                            </span>
+                        </div>
+                        <div class="features-list">
+                            {% for feature in plan.features.splitlines|slice:":5" %}
+                            <div class="feature-item">
+                                <i class="fas fa-check text-success me-2"></i>
+                                <span>{{ feature }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent border-0 text-center text-muted">
+                    <small><i class="fas fa-clock me-1"></i>Last updated: {{ plan.updated_at|date:"M d, Y" }}</small>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info text-center">
+                <i class="fas fa-info-circle me-2"></i>
+                No cable plans available. Click "Add New Plan" to create one.
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Add Plan Modal -->
+<div class="modal fade" id="addPlanModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Plan</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{% url 'plan_list' %}" method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="create">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Plan Name</label>
+                        <input type="text" class="form-control" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" name="description" rows="3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Price (₱/month)</label>
+                        <input type="number" class="form-control" name="price" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Number of Channels</label>
+                        <input type="number" class="form-control" name="channels" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Features (one per line)</label>
+                        <textarea class="form-control" name="features" rows="5" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Plan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Plan Modal -->
+<div class="modal fade" id="editPlanModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Plan</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{% url 'plan_list' %}" method="POST" id="editPlanForm">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="edit">
+                <input type="hidden" name="plan_id" value="">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Plan Name</label>
+                        <input type="text" class="form-control" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" name="description" rows="3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Price (₱/month)</label>
+                        <input type="number" class="form-control" name="price" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Number of Channels</label>
+                        <input type="number" class="form-control" name="channels" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Features (one per line)</label>
+                        <textarea class="form-control" name="features" rows="5" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Plan Modal -->
+<div class="modal fade" id="deletePlanModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Plan</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the plan "<span id="deletePlanName"></span>"?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form action="{% url 'plan_list' %}" method="POST" id="deletePlanForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="plan_id" value="">
+                    <button type="submit" class="btn btn-danger">Delete Plan</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Handle Edit Plan Modal
+    $('#editPlanModal').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget);
+        var planId = button.data('plan-id');
+        var modal = $(this);
+        
+        // Set plan_id in the form
+        modal.find('input[name="plan_id"]').val(planId);
+        
+        // Fill form fields
+        modal.find('input[name="name"]').val(button.data('plan-name'));
+        modal.find('textarea[name="description"]').val(button.data('plan-description'));
+        modal.find('input[name="price"]').val(button.data('plan-price'));
+        modal.find('input[name="channels"]').val(button.data('plan-channels'));
+        modal.find('textarea[name="features"]').val(button.data('plan-features'));
+    });
+
+    // Handle Delete Plan Modal
+    $('#deletePlanModal').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget);
+        var planId = button.data('plan-id');
+        var planName = button.data('plan-name');
+        var modal = $(this);
+        
+        modal.find('#deletePlanName').text(planName);
+        modal.find('input[name="plan_id"]').val(planId);
+    });
+});
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .plan-card {
+        border: none;
+        border-radius: 15px;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 15px rgba(0, 0, 0, 0.05);
+    }
+
+    .plan-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .plan-name {
+        color: #2c3e50;
+        font-weight: 600;
+    }
+
+    .price {
+        color: #3498db;
+        font-size: 2.5rem;
+        font-weight: 700;
+    }
+
+    .feature-item {
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        color: #555;
+        font-size: 0.95rem;
+    }
+
+    .feature-item:last-child {
+        border-bottom: none;
+    }
+
+    .features-list {
+        padding-top: 1rem;
+        margin-top: 1rem;
+    }
+
+    .btn-primary {
+        border-radius: 8px;
+        padding: 0.5rem 1.5rem;
+        font-weight: 500;
+    }
+
+    .modal-content {
+        border: none;
+        border-radius: 15px;
+    }
+
+    .modal-header {
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .modal-footer {
+        border-top: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .form-control {
+        border-radius: 8px;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        padding: 0.75rem 1rem;
+    }
+
+    .form-control:focus {
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        border-color: #3498db;
+    }
+
+    .card-text {
+        line-height: 1.6;
+    }
+
+    .dropdown-menu {
+        border: none;
+        box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+    }
+
+    .dropdown-item {
+        padding: 0.75rem 1.5rem;
+    }
+
+    .alert {
+        border-radius: 10px;
+        border: none;
+    }
+</style>
+{% endblock %} 

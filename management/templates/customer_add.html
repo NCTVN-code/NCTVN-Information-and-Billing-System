@@ -1,0 +1,203 @@
+{% extends 'management_base.html' %}
+{% load static %}
+
+{% block title %}Add New Customer - Cable TV Network{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">Add New Customer</h6>
+                    <a href="{% url 'customer_list' %}" class="btn btn-sm btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to List
+                    </a>
+                </div>
+                <div class="card-body">
+                    <form method="POST" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        
+                        <!-- Account Information -->
+                        <h5 class="mb-3">Account Information</h5>
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="username" class="form-label">Username</label>
+                                    <input type="text" class="form-control" id="username" name="username" required>
+                                    <div class="invalid-feedback">
+                                        Please provide a username.
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="email" class="form-label">Email Address</label>
+                                    <input type="email" class="form-control" id="email" name="email" required>
+                                    <div class="invalid-feedback">
+                                        Please provide a valid email address.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="password" class="form-label">Password</label>
+                                    <div class="input-group">
+                                        <input type="password" class="form-control" id="password" name="password" required>
+                                        <button class="btn btn-outline-secondary toggle-password" type="button" 
+                                                data-target="password">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                    <div class="invalid-feedback">
+                                        Please provide a password.
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="confirm_password" class="form-label">Confirm Password</label>
+                                    <div class="input-group">
+                                        <input type="password" class="form-control" id="confirm_password" required>
+                                        <button class="btn btn-outline-secondary toggle-password" type="button" 
+                                                data-target="confirm_password">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                    <div class="invalid-feedback">
+                                        Passwords do not match.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Personal Information -->
+                        <h5 class="mb-3">Personal Information</h5>
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="first_name" class="form-label">First Name</label>
+                                    <input type="text" class="form-control" id="first_name" name="first_name" required>
+                                    <div class="invalid-feedback">
+                                        Please provide a first name.
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="last_name" class="form-label">Last Name</label>
+                                    <input type="text" class="form-control" id="last_name" name="last_name" required>
+                                    <div class="invalid-feedback">
+                                        Please provide a last name.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="phone" class="form-label">Phone Number</label>
+                            <input type="tel" class="form-control" id="phone" name="phone" required>
+                            <div class="invalid-feedback">
+                                Please provide a phone number.
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="address" class="form-label">Address</label>
+                            <textarea class="form-control" id="address" name="address" rows="3" required></textarea>
+                            <div class="invalid-feedback">
+                                Please provide an address.
+                            </div>
+                        </div>
+                        
+                        <!-- Plan Selection -->
+                        <h5 class="mb-3">Plan Selection</h5>
+                        <div class="mb-4">
+                            <label for="plan" class="form-label">Cable Plan</label>
+                            <select class="form-select" id="plan" name="plan" required>
+                                <option value="">Select a plan</option>
+                                {% for plan in plans %}
+                                <option value="{{ plan.id }}">{{ plan.name }} - ₱{{ plan.price }}/month</option>
+                                {% endfor %}
+                            </select>
+                            <div class="invalid-feedback">
+                                Please select a plan.
+                            </div>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-user-plus me-2"></i>Add Customer
+                            </button>
+                            <a href="{% url 'customer_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Form validation
+    var forms = document.querySelectorAll('.needs-validation');
+    Array.prototype.slice.call(forms).forEach(function(form) {
+        form.addEventListener('submit', function(event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            
+            // Check if passwords match
+            var password = $('#password').val();
+            var confirmPassword = $('#confirm_password').val();
+            if (password !== confirmPassword) {
+                event.preventDefault();
+                $('#confirm_password').addClass('is-invalid');
+                return false;
+            }
+            
+            form.classList.add('was-validated');
+        }, false);
+    });
+    
+    // Toggle password visibility
+    $('.toggle-password').click(function() {
+        var target = $(this).data('target');
+        var input = $('#' + target);
+        var icon = $(this).find('i');
+        
+        if (input.attr('type') === 'password') {
+            input.attr('type', 'text');
+            icon.removeClass('fa-eye').addClass('fa-eye-slash');
+        } else {
+            input.attr('type', 'password');
+            icon.removeClass('fa-eye-slash').addClass('fa-eye');
+        }
+    });
+    
+    // Password confirmation validation
+    $('#confirm_password').on('input', function() {
+        var password = $('#password').val();
+        var confirmPassword = $(this).val();
+        
+        if (password && confirmPassword) {
+            if (password === confirmPassword) {
+                $(this).removeClass('is-invalid').addClass('is-valid');
+            } else {
+                $(this).removeClass('is-valid').addClass('is-invalid');
+            }
+        }
+    });
+});
+</script>
+{% endblock %} 

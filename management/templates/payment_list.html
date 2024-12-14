@@ -1,0 +1,368 @@
+{% extends 'management_base.html' %}
+{% load static %}
+
+{% block title %}Payments - Cable TV Network{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Total Payments</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_payments }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-money-bill-wave fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Total Revenue</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                ₱{{ total_revenue|floatformat:2 }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Today's Payments</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ todays_payments }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-calendar-day fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Average Payment</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                ₱{{ average_payment|floatformat:2 }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-chart-line fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Methods Chart -->
+    <div class="row mb-4">
+        <div class="col-xl-8 col-lg-7">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="font-weight-bold text-primary">Payment History</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-area">
+                        <canvas id="paymentHistoryChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4 col-lg-5">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Payment Methods</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-pie">
+                        <canvas id="paymentMethodsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payments Table -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-primary">Payment Records</h6>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#filterModal">
+                <i class="fas fa-filter me-2"></i>Filter
+            </button>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered datatable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Transaction ID</th>
+                            <th>Customer</th>
+                            <th>Amount</th>
+                            <th>Method</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for payment in payments %}
+                        <tr>
+                            <td>{{ payment.transaction_id }}</td>
+                            <td>{{ payment.bill.customer.user.get_full_name }}</td>
+                            <td>₱{{ payment.amount|floatformat:2 }}</td>
+                            <td>
+                                <span class="badge {% if payment.payment_method == 'cash' %}bg-success
+                                    {% elif payment.payment_method == 'card' %}bg-info
+                                    {% else %}bg-primary{% endif %}">
+                                    {{ payment.get_payment_method_display }}
+                                </span>
+                            </td>
+                            <td>{{ payment.payment_date|date:"M d, Y H:i A" }}</td>
+                            <td>
+                                <span class="badge bg-success">Completed</span>
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="{% url 'customer_detail' payment.bill.customer.id %}" 
+                                       class="btn btn-sm btn-primary" title="View User">
+                                        <i class="fas fa-user"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Modal -->
+<div class="modal fade" id="filterModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Filter Payments</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="filterForm">
+                    <div class="mb-3">
+                        <label class="form-label">Payment Method</label>
+                        <select class="form-select" name="payment_method">
+                            <option value="">All</option>
+                            <option value="cash">Cash</option>
+                            <option value="card">Card</option>
+                            <option value="bank_transfer">Bank Transfer</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Amount Range</label>
+                        <div class="input-group mb-2">
+                            <span class="input-group-text">₱</span>
+                            <input type="number" class="form-control" name="min_amount" 
+                                   step="0.01" placeholder="Min">
+                            <span class="input-group-text">to</span>
+                            <input type="number" class="form-control" name="max_amount" 
+                                   step="0.01" placeholder="Max">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Date Range</label>
+                        <div class="input-group">
+                            <input type="date" class="form-control" name="start_date">
+                            <span class="input-group-text">to</span>
+                            <input type="date" class="form-control" name="end_date">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="applyFilter">Apply Filter</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+$(document).ready(function() {
+    // Initialize DataTable
+    var table = initializeDataTable('.datatable', {
+        order: [[4, 'desc']] // Sort by date by default
+    });
+
+    // Payment History Chart
+    var ctx = document.getElementById('paymentHistoryChart').getContext('2d');
+    var paymentHistoryChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {{ payment_dates|safe }},
+            datasets: [{
+                label: 'Daily Payments',
+                data: {{ payment_amounts|safe }},
+                borderColor: '#4e73df',
+                backgroundColor: 'rgba(78, 115, 223, 0.05)',
+                tension: 0.3,
+                fill: true
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '₱' + value;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Payment Methods Chart
+    var pieCtx = document.getElementById('paymentMethodsChart').getContext('2d');
+    var paymentMethodsData = {{ payment_methods_data|safe }};
+    var paymentMethods = ['Cash', 'Card', 'Bank Transfer'];
+    
+    // Filter out payment methods with zero values
+    var filteredData = [];
+    var filteredLabels = [];
+    var colors = ['#1cc88a', '#4e73df', '#36b9cc'];
+    var hoverColors = ['#17a673', '#2e59d9', '#2c9faf'];
+    var filteredColors = [];
+    var filteredHoverColors = [];
+    
+    paymentMethodsData.forEach((value, index) => {
+        if (value > 0) {
+            filteredData.push(value);
+            filteredLabels.push(paymentMethods[index]);
+            filteredColors.push(colors[index]);
+            filteredHoverColors.push(hoverColors[index]);
+        }
+    });
+    
+    var paymentMethodsChart = new Chart(pieCtx, {
+        type: 'doughnut',
+        data: {
+            labels: filteredLabels,
+            datasets: [{
+                data: filteredData,
+                backgroundColor: filteredColors,
+                hoverBackgroundColor: filteredHoverColors,
+                hoverBorderColor: "rgba(234, 236, 244, 1)"
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            },
+            cutout: '70%'
+        }
+    });
+
+    // Handle Filter Form
+    $('#applyFilter').click(function() {
+        var method = $('select[name="payment_method"]').val();
+        var minAmount = $('input[name="min_amount"]').val();
+        var maxAmount = $('input[name="max_amount"]').val();
+        var startDate = $('input[name="start_date"]').val();
+        var endDate = $('input[name="end_date"]').val();
+
+        // Clear existing filters
+        table.columns().search('').draw();
+
+        // Apply new filters
+        if (method) {
+            table.column(3).search(method).draw();
+        }
+        if (minAmount || maxAmount) {
+            $.fn.dataTable.ext.search.push(
+                function(settings, data, dataIndex) {
+                    var amount = parseFloat(data[2].replace('₱', ''));
+                    var min = parseFloat(minAmount) || 0;
+                    var max = parseFloat(maxAmount) || Infinity;
+                    return amount >= min && amount <= max;
+                }
+            );
+            table.draw();
+        }
+        if (startDate && endDate) {
+            $.fn.dataTable.ext.search.push(
+                function(settings, data, dataIndex) {
+                    var date = new Date(data[4]);
+                    var start = new Date(startDate);
+                    var end = new Date(endDate);
+                    return date >= start && date <= end;
+                }
+            );
+            table.draw();
+        }
+
+        $('#filterModal').modal('hide');
+    });
+});
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chart-area {
+        height: 320px;
+        position: relative;
+    }
+    
+    .chart-pie {
+        height: 250px;
+        position: relative;
+    }
+    
+    .badge {
+        font-size: 0.8rem;
+        padding: 0.5rem 0.8rem;
+    }
+</style>
+{% endblock %} 

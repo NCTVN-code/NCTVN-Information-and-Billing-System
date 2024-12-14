@@ -1,0 +1,224 @@
+{% extends 'subscriber/base.html' %}
+{% load static %}
+
+{% block title %}Subscribe to {{ plan.name }} - Cable TV Network{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <nav aria-label="breadcrumb">
+                                <ol class="breadcrumb mb-2">
+                                    <li class="breadcrumb-item">
+                                        <a href="{% url 'subscriber:plan_list' %}">Plans</a>
+                                    </li>
+                                    <li class="breadcrumb-item">
+                                        <a href="{% url 'subscriber:plan_detail' plan.id %}">{{ plan.name }}</a>
+                                    </li>
+                                    <li class="breadcrumb-item active">Subscribe</li>
+                                </ol>
+                            </nav>
+                            <h4 class="mb-1">Subscribe to {{ plan.name }}</h4>
+                            <p class="mb-0 text-muted">
+                                Complete your subscription application
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Application Form -->
+        <div class="col-lg-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Subscription Details</h6>
+                </div>
+                <div class="card-body">
+                    <form method="POST" class="needs-validation" novalidate>
+                        {% csrf_token %}
+
+                        <!-- Personal Information -->
+                        <div class="mb-4">
+                            <h6 class="text-primary mb-3">Personal Information</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Full Name</label>
+                                    <input type="text" class="form-control" value="{{ customer.user.get_full_name }}" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Email</label>
+                                    <input type="email" class="form-control" value="{{ customer.user.email }}" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Phone Number</label>
+                                    <input type="tel" class="form-control" value="{{ customer.phone }}" readonly>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Installation Address</label>
+                                    <textarea class="form-control" name="installation_address" rows="3" 
+                                              required>{{ customer.address }}</textarea>
+                                    <div class="invalid-feedback">
+                                        Please provide the installation address.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Installation Preferences -->
+                        <div class="mb-4">
+                            <h6 class="text-primary mb-3">Installation Preferences</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Preferred Installation Date</label>
+                                    <input type="date" class="form-control" name="installation_date" required
+                                           min="{{ min_installation_date|date:'Y-m-d' }}">
+                                    <div class="invalid-feedback">
+                                        Please select a preferred installation date.
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Preferred Time Slot</label>
+                                    <select class="form-select" name="installation_time" required>
+                                        <option value="">Choose time slot...</option>
+                                        <option value="morning">Morning (9 AM - 12 PM)</option>
+                                        <option value="afternoon">Afternoon (1 PM - 4 PM)</option>
+                                        <option value="evening">Evening (4 PM - 7 PM)</option>
+                                    </select>
+                                    <div class="invalid-feedback">
+                                        Please select a preferred time slot.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Additional Notes -->
+                        <div class="mb-4">
+                            <label class="form-label">Additional Notes</label>
+                            <textarea class="form-control" name="installation_notes" rows="3"
+                                      placeholder="Any special instructions or requirements..."></textarea>
+                        </div>
+
+                        <!-- Terms and Conditions -->
+                        <div class="mb-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="terms" required>
+                                <label class="form-check-label" for="terms">
+                                    I agree to the <a href="#" data-bs-toggle="modal" 
+                                                    data-bs-target="#termsModal">Terms and Conditions</a>
+                                </label>
+                                <div class="invalid-feedback">
+                                    <i class="fas fa-info-circle me-1"></i>You must agree before submitting.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-check me-2"></i>Submit Application
+                            </button>
+                            <a href="{% url 'subscriber:plan_detail' plan.id %}" class="btn btn-light">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Plan Summary -->
+        <div class="col-lg-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Plan Summary</h6>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <h5 class="mb-1">{{ plan.name }}</h5>
+                        <h2 class="text-primary mb-0">₱{{ plan.price|floatformat:2 }}</h2>
+                        <small class="text-muted">per month</small>
+                    </div>
+
+                    <hr>
+
+                    <div class="plan-features mb-4">
+                        <h6 class="text-primary mb-3">Features</h6>
+                        <ul class="list-unstyled mb-0">
+                            {% for feature in plan.feature_list %}
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>{{ feature }}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+
+                    <div class="alert alert-info mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Installation is free with a 12-month contract.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current Plan -->
+            {% if current_plan %}
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Current Plan</h6>
+                </div>
+                <div class="card-body">
+                    <h6 class="mb-2">{{ current_plan.name }}</h6>
+                    <p class="text-muted mb-3">₱{{ current_plan.price|floatformat:2 }} per month</p>
+                    <div class="alert alert-warning mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Switching plans may affect your current subscription and billing cycle.
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Terms and Conditions Modal -->
+<div class="modal fade" id="termsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Terms and Conditions</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Add your terms and conditions content here -->
+                <h6>1. Service Agreement</h6>
+                <p>Terms and conditions text...</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">I Understand</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Form validation
+    var form = document.querySelector('.needs-validation');
+    form.addEventListener('submit', function(event) {
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+    }, false);
+});
+</script>
+{% endblock %} 

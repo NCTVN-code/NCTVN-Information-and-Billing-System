@@ -1,0 +1,160 @@
+{% extends 'management_base.html' %}
+{% load static %}
+
+{% block title %}Customer List - Cable TV Network{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Heading -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Customer Management</h1>
+        <a href="{% url 'customer_add' %}" class="btn btn-primary">
+            <i class="fas fa-user-plus me-2"></i>Add New Customer
+        </a>
+    </div>
+
+    <!-- Customers Table Card -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Customer List</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered datatable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Plan</th>
+                            <th>Status</th>
+                            <th>Join Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for customer in customers %}
+                        <tr>
+                            <td>{{ customer.user.get_full_name }}</td>
+                            <td>{{ customer.user.email }}</td>
+                            <td>{{ customer.phone }}</td>
+                            <td>
+                                {% if customer.plan %}
+                                    {{ customer.plan.name }}
+                                {% else %}
+                                    <span class="text-muted">No Plan</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge {% if customer.status == 'approved' %}bg-success
+                                           {% elif customer.status == 'pending' %}bg-warning
+                                           {% elif customer.status == 'rejected' %}bg-danger
+                                           {% else %}bg-secondary{% endif %}">
+                                    {{ customer.get_status_display }}
+                                </span>
+                            </td>
+                            <td>{{ customer.application_date|date:"M d, Y" }}</td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="{% url 'customer_detail' customer_id=customer.id %}" 
+                                       class="btn btn-sm btn-info" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'customer_edit' customer_id=customer.id %}" 
+                                       class="btn btn-sm btn-primary" title="Edit Customer">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{% url 'customer_delete' customer_id=customer.id %}" 
+                                       class="btn btn-sm btn-danger" title="Delete Customer">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                    {% if customer.status == 'pending' %}
+                                    <a href="{% url 'customer_application' customer_id=customer.id %}" 
+                                       class="btn btn-sm btn-warning" title="Review Application">
+                                        <i class="fas fa-clipboard-check"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4">
+                                <div class="text-muted">
+                                    <i class="fas fa-users fa-2x mb-3"></i>
+                                    <p class="mb-0">No customers found.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if customers.has_other_pages %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if customers.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ customers.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_plan %}&plan={{ selected_plan }}{% endif %}" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in customers.paginator.page_range %}
+                    <li class="page-item {% if customers.number == num %}active{% endif %}">
+                        <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_plan %}&plan={{ selected_plan }}{% endif %}">
+                            {{ num }}
+                        </a>
+                    </li>
+                    {% endfor %}
+                    
+                    {% if customers.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ customers.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_plan %}&plan={{ selected_plan }}{% endif %}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Initialize DataTable
+    initializeDataTable('.datatable', {
+        order: [[5, "desc"]] // Sort by join date by default
+    });
+
+    // Auto-submit form when filters change
+    $('#status, #plan').change(function() {
+        $(this).closest('form').submit();
+    });
+});
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .btn-group .btn {
+        margin-right: 2px;
+    }
+    
+    .badge {
+        font-size: 85%;
+        padding: 0.4em 0.6em;
+    }
+    
+    .table td {
+        vertical-align: middle;
+    }
+</style>
+{% endblock %} 

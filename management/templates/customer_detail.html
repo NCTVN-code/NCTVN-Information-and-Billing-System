@@ -1,0 +1,175 @@
+{% extends 'management_base.html' %}
+{% load static %}
+
+{% block title %}{{ customer.user.get_full_name }} - Customer Details{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Customer Information Card -->
+    <div class="row">
+        <div class="col-lg-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Customer Information</h6>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-user-circle fa-5x text-gray-300 mb-3"></i>
+                        <h4>{{ customer.user.get_full_name }}</h4>
+                        <span class="badge {% if customer.status == 'approved' %}bg-success
+                            {% elif customer.status == 'pending' %}bg-warning
+                            {% elif customer.status == 'rejected' %}bg-danger
+                            {% else %}bg-secondary{% endif %} mb-2">
+                            {{ customer.status|title }}
+                        </span>
+                    </div>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                            <strong><i class="fas fa-envelope me-2"></i>Email:</strong>
+                            <p class="mb-0">{{ customer.user.email }}</p>
+                        </li>
+                        <li class="list-group-item">
+                            <strong><i class="fas fa-phone me-2"></i>Phone:</strong>
+                            <p class="mb-0">{{ customer.phone }}</p>
+                        </li>
+                        <li class="list-group-item">
+                            <strong><i class="fas fa-map-marker-alt me-2"></i>Address:</strong>
+                            <p class="mb-0">{{ customer.address }}</p>
+                        </li>
+                        <li class="list-group-item">
+                            <strong><i class="fas fa-tv me-2"></i>Current Plan:</strong>
+                            <p class="mb-0">{{ customer.plan.name|default:"No Plan" }}</p>
+                        </li>
+                        <li class="list-group-item">
+                            <strong><i class="fas fa-calendar-alt me-2"></i>Application Date:</strong>
+                            <p class="mb-0">{{ customer.application_date|date:"M d, Y" }}</p>
+                        </li>
+                        {% if customer.installation_date %}
+                        <li class="list-group-item">
+                            <strong><i class="fas fa-plug me-2"></i>Preferred Installation Date:</strong>
+                            <p class="mb-0">{{ customer.installation_date|date:"M d, Y" }} - {{ customer.get_installation_time_display }}</p>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+                <div class="card-footer">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'customer_edit' customer.id %}" class="btn btn-primary">
+                            <i class="fas fa-edit me-2"></i>Edit Customer
+                        </a>
+                        {% if customer.status == 'pending' %}
+                        <a href="{% url 'customer_application' customer.id %}" class="btn btn-warning">
+                            <i class="fas fa-check me-2"></i>Review Application
+                        </a>
+                        {% endif %}
+                        {% if customer.status == 'approved' %}
+                        <a href="{% url 'generate_bill' customer.id %}" class="btn btn-info">
+                            <i class="fas fa-file-invoice-dollar me-2"></i>Generate Bill
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <!-- Billing History -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Billing History</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered datatable" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Bill Date</th>
+                                    <th>Due Date</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for bill in bills %}
+                                <tr>
+                                    <td>{{ bill.bill_date|date:"M d, Y" }}</td>
+                                    <td>{{ bill.due_date|date:"M d, Y" }}</td>
+                                    <td>${{ bill.amount|floatformat:2 }}</td>
+                                    <td>
+                                        <span class="badge {% if bill.status == 'paid' %}bg-success
+                                            {% elif bill.status == 'unpaid' %}bg-warning
+                                            {% else %}bg-danger{% endif %}">
+                                            {{ bill.status|title }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if bill.status == 'unpaid' %}
+                                        <a href="{% url 'record_payment' bill.id %}" class="btn btn-sm btn-success">
+                                            <i class="fas fa-money-bill-wave"></i> Record Payment
+                                        </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center">No billing history available</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment History -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Payment History</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered datatable" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Payment Date</th>
+                                    <th>Amount</th>
+                                    <th>Method</th>
+                                    <th>Transaction ID</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for payment in payments %}
+                                <tr>
+                                    <td>{{ payment.payment_date|date:"M d, Y" }}</td>
+                                    <td>${{ payment.amount|floatformat:2 }}</td>
+                                    <td>{{ payment.payment_method|title }}</td>
+                                    <td>{{ payment.transaction_id }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">No payment history available</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Initialize DataTable
+    initializeDataTable('.datatable', {
+        order: [[0, 'desc']], // Sort by date by default
+        pageLength: 5
+    });
+});
+</script>
+{% endblock %} 

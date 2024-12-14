@@ -1,0 +1,326 @@
+{% extends 'management_base.html' %}
+{% load static %}
+
+{% block title %}Reports Dashboard - Cable TV Network{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Paid Subscribers</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ paid_subscribers }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-users fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Unpaid Subscribers</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ unpaid_subscribers }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clock fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-danger h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                                Disconnected Accounts</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ disconnected_accounts }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-user-slash fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Monthly Revenue</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                ${{ monthly_revenue.total|default:0|floatformat:2 }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Monthly Revenue Chart -->
+        <div class="col-xl-8 col-lg-7">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="font-weight-bold text-primary">Monthly Revenue</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-area">
+                        <canvas id="revenueChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Subscriber Distribution -->
+        <div class="col-xl-4 col-lg-5">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Subscriber Distribution</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-pie mb-4">
+                        <canvas id="subscriberPieChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Subscriber Reports -->
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Detailed Reports</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="nav nav-tabs" id="reportTabs" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" id="paid-tab" data-bs-toggle="tab" href="#paid" role="tab">
+                                Paid Subscribers
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="unpaid-tab" data-bs-toggle="tab" href="#unpaid" role="tab">
+                                Unpaid Subscribers
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="disconnected-tab" data-bs-toggle="tab" href="#disconnected" role="tab">
+                                Disconnected Accounts
+                            </a>
+                        </li>
+                    </ul>
+                    <div class="tab-content mt-4" id="reportTabContent">
+                        <!-- Paid Subscribers Tab -->
+                        <div class="tab-pane fade show active" id="paid" role="tabpanel">
+                            <div class="table-responsive">
+                                <table class="table table-bordered datatable" width="100%" cellspacing="0">
+                                    <thead>
+                                        <tr>
+                                            <th>Customer</th>
+                                            <th>Plan</th>
+                                            <th>Last Payment</th>
+                                            <th>Amount</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for customer in paid_subscribers_list %}
+                                        <tr>
+                                            <td>{{ customer.user.get_full_name }}</td>
+                                            <td>{{ customer.plan.name }}</td>
+                                            <td>{{ customer.last_payment_date|date:"M d, Y" }}</td>
+                                            <td>${{ customer.last_payment_amount|floatformat:2 }}</td>
+                                            <td>
+                                                <span class="badge bg-success">Paid</span>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- Unpaid Subscribers Tab -->
+                        <div class="tab-pane fade" id="unpaid" role="tabpanel">
+                            <div class="table-responsive">
+                                <table class="table table-bordered datatable" width="100%" cellspacing="0">
+                                    <thead>
+                                        <tr>
+                                            <th>Customer</th>
+                                            <th>Plan</th>
+                                            <th>Due Date</th>
+                                            <th>Amount Due</th>
+                                            <th>Days Overdue</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for customer in unpaid_subscribers_list %}
+                                        <tr>
+                                            <td>{{ customer.user.get_full_name }}</td>
+                                            <td>{{ customer.plan.name }}</td>
+                                            <td>{{ customer.bill.due_date|date:"M d, Y" }}</td>
+                                            <td>${{ customer.bill.amount|floatformat:2 }}</td>
+                                            <td>{{ customer.days_overdue }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- Disconnected Accounts Tab -->
+                        <div class="tab-pane fade" id="disconnected" role="tabpanel">
+                            <div class="table-responsive">
+                                <table class="table table-bordered datatable" width="100%" cellspacing="0">
+                                    <thead>
+                                        <tr>
+                                            <th>Customer</th>
+                                            <th>Last Plan</th>
+                                            <th>Disconnection Date</th>
+                                            <th>Reason</th>
+                                            <th>Outstanding Balance</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for customer in disconnected_accounts_list %}
+                                        <tr>
+                                            <td>{{ customer.user.get_full_name }}</td>
+                                            <td>{{ customer.last_plan }}</td>
+                                            <td>{{ customer.disconnection_date|date:"M d, Y" }}</td>
+                                            <td>{{ customer.disconnection_reason }}</td>
+                                            <td>${{ customer.outstanding_balance|floatformat:2 }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+$(document).ready(function() {
+    // Initialize DataTable
+    initializeDataTable('.datatable');
+
+    // Monthly Revenue Chart
+    var ctx = document.getElementById('revenueChart').getContext('2d');
+    var revenueChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {{ monthly_revenue_labels|safe }},
+            datasets: [{
+                label: 'Monthly Revenue',
+                data: {{ monthly_revenue_data|safe }},
+                borderColor: '#4e73df',
+                backgroundColor: 'rgba(78, 115, 223, 0.05)',
+                tension: 0.3,
+                fill: true
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '₱' + value;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Subscriber Distribution Pie Chart
+    var pieCtx = document.getElementById('subscriberPieChart').getContext('2d');
+    var subscriberPieChart = new Chart(pieCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Paid', 'Unpaid', 'Disconnected'],
+            datasets: [{
+                data: [
+                    {{ paid_subscribers }},
+                    {{ unpaid_subscribers }},
+                    {{ disconnected_accounts }}
+                ],
+                backgroundColor: ['#1cc88a', '#f6c23e', '#e74a3b'],
+                hoverBackgroundColor: ['#17a673', '#dda20a', '#be2617'],
+                hoverBorderColor: "rgba(234, 236, 244, 1)",
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            },
+            cutout: '70%'
+        }
+    });
+});
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chart-area {
+        height: 320px;
+        position: relative;
+    }
+    
+    .chart-pie {
+        height: 250px;
+        position: relative;
+    }
+    
+    .nav-tabs .nav-link {
+        color: #4e73df;
+    }
+    
+    .nav-tabs .nav-link.active {
+        color: #2e59d9;
+        font-weight: bold;
+    }
+</style>
+{% endblock %} 

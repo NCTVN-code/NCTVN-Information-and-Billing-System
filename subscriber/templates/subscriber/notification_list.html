@@ -1,0 +1,214 @@
+{% extends 'subscriber/base.html' %}
+{% load static %}
+
+{% block title %}Notifications - Cable TV Network{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="mb-1">Notifications</h4>
+                            <p class="mb-0 text-muted">
+                                Stay updated with important announcements and alerts
+                            </p>
+                        </div>
+                        <div>
+                            <button class="btn btn-outline-primary" id="markAllRead">
+                                <i class="fas fa-check-double me-2"></i>Mark All as Read
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <!-- Notifications List -->
+            <div class="card shadow">
+                <div class="card-body p-0">
+                    <div class="notifications-list">
+                        {% for notification in notifications %}
+                        <div class="notification-item p-4 {% if not notification.is_read %}unread{% endif %} border-bottom">
+                            <div class="row align-items-center">
+                                <div class="col-auto">
+                                    <div class="notification-icon rounded-circle 
+                                                bg-{{ notification.type|default:'primary' }}-subtle p-3">
+                                        {% if notification.type == 'billing' %}
+                                            <i class="fas fa-file-invoice text-primary fa-lg"></i>
+                                        {% elif notification.type == 'payment' %}
+                                            <i class="fas fa-credit-card text-success fa-lg"></i>
+                                        {% elif notification.type == 'service' %}
+                                            <i class="fas fa-tv text-warning fa-lg"></i>
+                                        {% else %}
+                                            <i class="fas fa-bell text-primary fa-lg"></i>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="notification-content">
+                                        <h6 class="mb-1">{{ notification.title }}</h6>
+                                        <p class="text-muted mb-1">{{ notification.message }}</p>
+                                        <small class="text-muted">
+                                            <i class="fas fa-clock me-1"></i>
+                                            {{ notification.sent_date|timesince }} ago
+                                        </small>
+                                    </div>
+                                </div>
+                                <div class="col-auto">
+                                    <div class="notification-actions">
+                                        <a href="{% url 'subscriber:notification_detail' notification.id %}" 
+                                           class="btn btn-sm btn-light">
+                                            View Details
+                                        </a>
+                                        {% if not notification.is_read %}
+                                        <button class="btn btn-sm btn-outline-primary mark-read" 
+                                                data-id="{{ notification.id }}">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+                            <h5>No Notifications</h5>
+                            <p class="text-muted">You're all caught up!</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    {% if notifications.has_other_pages %}
+                    <div class="pagination-wrapper p-4 border-top">
+                        <nav aria-label="Notifications pagination">
+                            <ul class="pagination justify-content-center mb-0">
+                                {% if notifications.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ notifications.previous_page_number }}">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </a>
+                                </li>
+                                {% endif %}
+
+                                {% for num in notifications.paginator.page_range %}
+                                <li class="page-item {% if notifications.number == num %}active{% endif %}">
+                                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                                </li>
+                                {% endfor %}
+
+                                {% if notifications.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ notifications.next_page_number }}">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .notification-item {
+        transition: background-color 0.3s ease;
+    }
+
+    .notification-item:hover {
+        background-color: var(--light-bg);
+    }
+
+    .notification-item.unread {
+        background-color: rgba(37, 99, 235, 0.05);
+    }
+
+    .notification-icon {
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .notification-actions .btn {
+        margin-left: 0.5rem;
+    }
+
+    .bg-primary-subtle {
+        background-color: rgba(37, 99, 235, 0.1);
+    }
+
+    .bg-success-subtle {
+        background-color: rgba(34, 197, 94, 0.1);
+    }
+
+    .bg-warning-subtle {
+        background-color: rgba(245, 158, 11, 0.1);
+    }
+
+    .pagination {
+        margin-bottom: 0;
+    }
+
+    .page-link {
+        color: var(--primary-color);
+        border-color: #e3e6f0;
+    }
+
+    .page-item.active .page-link {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Mark single notification as read
+    $('.mark-read').click(function() {
+        const notificationId = $(this).data('id');
+        const $item = $(this).closest('.notification-item');
+        
+        $.post('/subscriber/notifications/' + notificationId + '/mark-read/', {
+            'csrfmiddlewaretoken': '{{ csrf_token }}'
+        })
+        .done(function() {
+            $item.removeClass('unread');
+            $(this).remove();
+        })
+        .fail(function() {
+            alert('Failed to mark notification as read');
+        });
+    });
+
+    // Mark all notifications as read
+    $('#markAllRead').click(function() {
+        $.post('/subscriber/notifications/mark-all-read/', {
+            'csrfmiddlewaretoken': '{{ csrf_token }}'
+        })
+        .done(function() {
+            $('.notification-item').removeClass('unread');
+            $('.mark-read').remove();
+        })
+        .fail(function() {
+            alert('Failed to mark all notifications as read');
+        });
+    });
+});
+</script>
+{% endblock %} 

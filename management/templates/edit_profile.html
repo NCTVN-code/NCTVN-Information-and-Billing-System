@@ -1,0 +1,264 @@
+{% extends 'management_base.html' %}
+{% load static %}
+
+{% block title %}Edit Profile - Cable TV Network{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Edit Profile</h6>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
+                        {% csrf_token %}
+
+                        <!-- Profile Picture -->
+                        <div class="mb-4 text-center">
+                            <div class="position-relative d-inline-block">
+                                {% if user.profile_picture %}
+                                    <img src="{% static user.profile_picture %}" alt="Profile Picture"
+                                         id="profilePreview" class="img-profile rounded-circle mb-3"
+                                         style="width: 150px; height: 150px;">
+                                {% else %}
+                                    <img src="https://via.placeholder.com/150" alt="Default Profile"
+                                         id="profilePreview" class="img-profile rounded-circle mb-3">
+                                {% endif %}
+                                <label for="profile_picture" class="position-absolute bottom-0 end-0 btn btn-sm btn-primary rounded-circle">
+                                    <i class="fas fa-camera"></i>
+                                </label>
+                            </div>
+                            <input type="file" id="profile_picture" name="profile_picture"
+                                   accept="image/jpeg,image/png" class="d-none">
+                            <div class="small text-muted">Click the camera icon to change profile picture</div>
+                        </div>
+
+                        <!-- Basic Information -->
+                        <h5 class="mb-3">Basic Information</h5>
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="first_name" class="form-label">First Name</label>
+                                    <input type="text" class="form-control" id="first_name" name="first_name"
+                                           value="{{ user.first_name }}" required>
+                                    <div class="invalid-feedback">
+                                        Please provide your first name.
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="last_name" class="form-label">Last Name</label>
+                                    <input type="text" class="form-control" id="last_name" name="last_name"
+                                           value="{{ user.last_name }}" required>
+                                    <div class="invalid-feedback">
+                                        Please provide your last name.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="email" class="form-label">Email Address</label>
+                            <input type="email" class="form-control" id="email" name="email"
+                                   value="{{ user.email }}" required>
+                            <div class="invalid-feedback">
+                                Please provide a valid email address.
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Change Password -->
+                        <h5 class="mb-3" id="password">Change Password</h5>
+                        <div class="mb-4">
+                            <label for="current_password" class="form-label">Current Password</label>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="current_password"
+                                       name="current_password">
+                                <button class="btn btn-outline-secondary toggle-password" type="button"
+                                        data-target="current_password">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="new_password" class="form-label">New Password</label>
+                                    <div class="input-group">
+                                        <input type="password" class="form-control" id="new_password"
+                                               name="new_password">
+                                        <button class="btn btn-outline-secondary toggle-password" type="button"
+                                                data-target="new_password">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="confirm_password" class="form-label">Confirm New Password</label>
+                                    <div class="input-group">
+                                        <input type="password" class="form-control" id="confirm_password"
+                                               name="confirm_password">
+                                        <button class="btn btn-outline-secondary toggle-password" type="button"
+                                                data-target="confirm_password">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Password Requirements -->
+                        <div class="card bg-light mb-4">
+                            <div class="card-body">
+                                <h6 class="font-weight-bold mb-2">Password Requirements:</h6>
+                                <ul class="mb-0 small">
+                                    <li>At least 8 characters long</li>
+                                    <li>Contains at least one uppercase letter</li>
+                                    <li>Contains at least one lowercase letter</li>
+                                    <li>Contains at least one number</li>
+                                    <li>Contains at least one special character</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Save Changes
+                            </button>
+                            <a href="{% url 'view_admin_profile' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Form validation
+    var forms = document.querySelectorAll('.needs-validation');
+    Array.prototype.slice.call(forms).forEach(function(form) {
+        form.addEventListener('submit', function(event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        }, false);
+    });
+
+    // Profile picture preview
+    $('#profile_picture').change(function() {
+        if (this.files && this.files[0]) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                $('#profilePreview').attr('src', e.target.result);
+            }
+            reader.readAsDataURL(this.files[0]);
+        }
+    });
+
+    // Toggle password visibility
+    $('.toggle-password').click(function() {
+        var target = $(this).data('target');
+        var input = $('#' + target);
+        var icon = $(this).find('i');
+
+        if (input.attr('type') === 'password') {
+            input.attr('type', 'text');
+            icon.removeClass('fa-eye').addClass('fa-eye-slash');
+        } else {
+            input.attr('type', 'password');
+            icon.removeClass('fa-eye-slash').addClass('fa-eye');
+        }
+    });
+
+    // Password validation
+    $('#new_password').on('input', function() {
+        var password = $(this).val();
+        var hasUpperCase = /[A-Z]/.test(password);
+        var hasLowerCase = /[a-z]/.test(password);
+        var hasNumbers = /\d/.test(password);
+        var hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+        var isLongEnough = password.length >= 8;
+
+        // Update requirements list
+        $('ul.requirements li').each(function() {
+            var requirement = $(this).text();
+            if (
+                (requirement.includes('8 characters') && isLongEnough) ||
+                (requirement.includes('uppercase') && hasUpperCase) ||
+                (requirement.includes('lowercase') && hasLowerCase) ||
+                (requirement.includes('number') && hasNumbers) ||
+                (requirement.includes('special') && hasSpecial)
+            ) {
+                $(this).addClass('text-success').prepend('<i class="fas fa-check me-1"></i>');
+            } else {
+                $(this).removeClass('text-success').find('i').remove();
+            }
+        });
+    });
+
+    // Confirm password validation
+    $('#confirm_password').on('input', function() {
+        var newPassword = $('#new_password').val();
+        var confirmPassword = $(this).val();
+
+        if (newPassword && confirmPassword) {
+            if (newPassword === confirmPassword) {
+                $(this).removeClass('is-invalid').addClass('is-valid');
+            } else {
+                $(this).removeClass('is-valid').addClass('is-invalid');
+            }
+        }
+    });
+});
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .img-profile {
+        object-fit: cover;
+        border: 3px solid #fff;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .position-relative .btn {
+        width: 35px;
+        height: 35px;
+        padding: 0;
+        line-height: 35px;
+    }
+
+    .input-group .btn {
+        z-index: 0;
+    }
+
+    .card ul {
+        list-style: none;
+        padding-left: 0;
+    }
+
+    .card ul li {
+        margin-bottom: 0.5rem;
+    }
+
+    .text-success {
+        color: #1cc88a !important;
+    }
+</style>
+{% endblock %}

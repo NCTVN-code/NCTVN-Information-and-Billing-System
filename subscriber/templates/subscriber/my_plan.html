@@ -1,0 +1,244 @@
+{% extends 'subscriber/base.html' %}
+{% load static %}
+
+{% block title %}My Plan - Cable TV Network{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-primary text-white">
+                <div class="card-body p-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h4 class="mb-1">{{ customer.plan.name }}</h4>
+                            <p class="mb-0">
+                                <i class="fas fa-calendar-alt me-2"></i>
+                                Member since {{ customer.application_date|date:"F d, Y" }}
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                            <a href="{% url 'subscriber:plan_list' %}" class="btn btn-light">
+                                <i class="fas fa-exchange-alt me-2"></i>Change Plan
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Plan Details -->
+        <div class="col-lg-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Plan Details</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-4">
+                        <div class="col-md-4">
+                            <div class="text-center p-4 bg-light rounded-3">
+                                <i class="fas fa-tv fa-2x text-primary mb-3"></i>
+                                <h5 class="mb-2">{{ customer.plan.channels }}</h5>
+                                <p class="text-muted mb-0">Channels</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center p-4 bg-light rounded-3">
+                                <i class="fas fa-money-bill-wave fa-2x text-success mb-3"></i>
+                                <h5 class="mb-2">₱{{ customer.plan.price|floatformat:2 }}</h5>
+                                <p class="text-muted mb-0">Monthly</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center p-4 bg-light rounded-3">
+                                <i class="fas fa-user-check fa-2x text-info mb-3"></i>
+                                <h5 class="mb-2">{{ customer.get_status_display }}</h5>
+                                <p class="text-muted mb-0">Status</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="plan-features mb-4">
+                        <h6 class="text-primary mb-3">Features</h6>
+                        <div class="row">
+                            {% for feature in customer.plan.feature_list %}
+                            <div class="col-md-6 mb-2">
+                                <div class="feature-item">
+                                    <i class="fas fa-check-circle text-success me-2"></i>
+                                    {{ feature }}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    {% if customer.status == 'approved' %}
+                    <div class="alert alert-success mb-0">
+                        <i class="fas fa-check-circle me-2"></i>
+                        Your subscription is active and in good standing.
+                    </div>
+                    {% elif customer.status == 'pending' %}
+                    <div class="alert alert-warning mb-0">
+                        <i class="fas fa-clock me-2"></i>
+                        Your application is being processed. We'll notify you once approved.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Channel List -->
+            <div class="card shadow">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">Channel List</h6>
+                    <button class="btn btn-sm btn-outline-primary" id="printChannelList">
+                        <i class="fas fa-print me-2"></i>Print
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover datatable">
+                            <thead>
+                                <tr>
+                                    <th>Channel</th>
+                                    <th>Number</th>
+                                    <th>Category</th>
+                                    <th>Quality</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for channel in channels %}
+                                <tr>
+                                    <td>{{ channel.name }}</td>
+                                    <td>{{ channel.number }}</td>
+                                    <td>{{ channel.category }}</td>
+                                    <td>{{ channel.quality }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">Channel list not available</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Subscription Info -->
+        <div class="col-lg-4">
+            <!-- Billing Summary -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Billing Summary</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-3">
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">Next Bill Date</span>
+                                <strong>{{ next_bill_date|date:"F d, Y" }}</strong>
+                            </div>
+                        </li>
+                        <li class="mb-3">
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">Monthly Fee</span>
+                                <strong>₱{{ customer.plan.price|floatformat:2 }}</strong>
+                            </div>
+                        </li>
+                        <li class="mb-3">
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">Outstanding Balance</span>
+                                <strong class="text-danger">₱{{ outstanding_balance|floatformat:2 }}</strong>
+                            </div>
+                        </li>
+                    </ul>
+
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'subscriber:billing_list' %}" class="btn btn-primary">
+                            <i class="fas fa-file-invoice me-2"></i>View Bills
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Support Card -->
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Need Help?</h6>
+                </div>
+                <div class="card-body">
+                    <div class="support-info">
+                        <p class="mb-3">
+                            <i class="fas fa-phone text-primary me-2"></i>
+                            Call us at: <strong>123-456-7890</strong>
+                        </p>
+                        <p class="mb-3">
+                            <i class="fas fa-envelope text-primary me-2"></i>
+                            Email: <strong>support@cabletv.com</strong>
+                        </p>
+                        <p class="mb-0">
+                            <i class="fas fa-clock text-primary me-2"></i>
+                            Available 24/7
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .feature-item {
+        padding: 0.5rem;
+        transition: background-color 0.3s ease;
+    }
+
+    .feature-item:hover {
+        background-color: #f8f9fa;
+        border-radius: 0.5rem;
+    }
+
+    .support-info p {
+        color: var(--secondary-color);
+    }
+
+    .support-info strong {
+        color: var(--dark-bg);
+    }
+
+    @media print {
+        .navbar, .card-header button, .support-info {
+            display: none !important;
+        }
+        .card {
+            border: none !important;
+            box-shadow: none !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Initialize DataTable for channel list
+    initializeDataTable('.datatable', {
+        pageLength: 10,
+        order: [[1, 'asc']]  // Sort by channel number
+    });
+
+    // Print channel list
+    $('#printChannelList').click(function() {
+        window.print();
+    });
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,204 @@
+{% extends 'management_base.html' %}
+{% load static %}
+
+{% block title %}My Profile - Cable TV Network{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Profile Information -->
+        <div class="col-xl-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">Profile Information</h6>
+                    <a href="{% url 'edit_admin_profile' %}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-edit me-2"></i>Edit Profile
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        {% if user.profile_picture %}
+                            <img src="{% static user.profile_picture %}" alt="Profile Picture" 
+                                 class="img-profile rounded-circle mb-3" style="width: 150px; height: 150px;">
+                        {% else %}
+                            <img src="https://via.placeholder.com/150" alt="Default Profile" 
+                                 class="img-profile rounded-circle mb-3">
+                        {% endif %}
+                        <h4 class="mb-1">{{ user.get_full_name }}</h4>
+                        <p class="text-muted mb-3">Administrator</p>
+                        <div class="small text-muted">
+                            Member since {{ user.date_joined|date:"M d, Y" }}
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="mb-3">
+                        <h6 class="font-weight-bold">Contact Information</h6>
+                        <p class="mb-1">
+                            <i class="fas fa-envelope me-2 text-primary"></i>{{ user.email }}
+                        </p>
+                        <p class="mb-1">
+                            <i class="fas fa-user me-2 text-primary"></i>{{ user.username }}
+                        </p>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="mb-3">
+                        <h6 class="font-weight-bold">Statistics</h6>
+                        <div class="row">
+                            <div class="col-6 mb-3">
+                                <div class="card bg-primary text-white">
+                                    <div class="card-body py-2">
+                                        <div class="text-center">
+                                            <div class="h4 mb-0">{{ total_customers }}</div>
+                                            <div class="small">Customers</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <div class="card bg-success text-white">
+                                    <div class="card-body py-2">
+                                        <div class="text-center">
+                                            <div class="h4 mb-0">₱{{ total_revenue|floatformat:2 }}</div>
+                                            <div class="small">Revenue</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'edit_admin_profile' %}" class="btn btn-primary">
+                            <i class="fas fa-edit me-2"></i>Edit Profile
+                        </a>
+                        <a href="{% url 'admin_logout' %}" class="btn btn-danger">
+                            <i class="fas fa-sign-out-alt me-2"></i>Logout
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activities -->
+        <div class="col-xl-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Recent Activities</h6>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        {% for activity in recent_activities %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker {% if activity.type == 'application' %}bg-primary
+                                {% elif activity.type == 'payment' %}bg-success
+                                {% else %}bg-info{% endif %}">
+                            </div>
+                            <div class="timeline-content">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="timeline-title mb-0">{{ activity.message }}</h6>
+                                    <div class="small text-muted">{{ activity.date|date:"M d, Y H:i" }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="text-center text-muted">
+                            <i class="fas fa-info-circle me-2"></i>No recent activities
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Account Security -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Account Security</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-4">
+                                <h6 class="font-weight-bold mb-2">Password</h6>
+                                <p class="text-muted mb-2">Last changed: Never</p>
+                                <a href="{% url 'edit_admin_profile' %}#password" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-key me-2"></i>Change Password
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-4">
+                                <h6 class="font-weight-bold mb-2">Two-Factor Authentication</h6>
+                                <p class="text-muted mb-2">Status: Not Enabled</p>
+                                <button class="btn btn-sm btn-secondary" disabled>
+                                    <i class="fas fa-lock me-2"></i>Enable 2FA
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .img-profile {
+        object-fit: cover;
+        border: 3px solid #fff;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .timeline {
+        position: relative;
+        padding: 20px 0;
+    }
+    
+    .timeline:before {
+        content: '';
+        position: absolute;
+        left: 7px;
+        top: 0;
+        height: 100%;
+        width: 2px;
+        background: #e3e6f0;
+    }
+    
+    .timeline-item {
+        position: relative;
+        padding-left: 30px;
+        margin-bottom: 20px;
+    }
+    
+    .timeline-marker {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+    }
+    
+    .timeline-content {
+        background: #f8f9fc;
+        padding: 15px;
+        border-radius: 10px;
+    }
+    
+    .timeline-title {
+        color: #2c3e50;
+        font-size: 0.9rem;
+    }
+    
+    .card .card-body .card {
+        box-shadow: none;
+    }
+</style>
+{% endblock %} 

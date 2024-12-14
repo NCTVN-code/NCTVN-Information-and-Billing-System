@@ -1,0 +1,228 @@
+{% extends 'management_base.html' %}
+{% load static %}
+
+{% block title %}Edit Customer - Cable TV Network{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">Edit Customer</h6>
+                    <div>
+                        <a href="{% url 'customer_detail' customer_id=customer.id %}" class="btn btn-sm btn-secondary me-2">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Details
+                        </a>
+                        <a href="{% url 'customer_delete' customer_id=customer.id %}" class="btn btn-sm btn-danger">
+                            <i class="fas fa-trash me-2"></i>Delete Customer
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form method="POST" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        
+                        <!-- Status Information -->
+                        <div class="alert {% if customer.status == 'approved' %}alert-success
+                                      {% elif customer.status == 'pending' %}alert-warning
+                                      {% elif customer.status == 'rejected' %}alert-danger
+                                      {% else %}alert-secondary{% endif %} mb-4">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">Current Status: {{ customer.get_status_display }}</h6>
+                                    <div class="small">
+                                        Application Date: {{ customer.application_date|date:"M d, Y" }}
+                                        {% if customer.installation_date %}
+                                        <br>Installation Date: {{ customer.installation_date|date:"M d, Y" }}
+                                        {% endif %}
+                                        {% if customer.installation_time %}
+                                        <br>Installation Time: {{ customer.get_installation_time_display }}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="form-group mb-0">
+                                    <select class="form-select" id="status" name="status" required>
+                                        {% for status, display in customer.STATUS_CHOICES %}
+                                        <option value="{{ status }}" {% if customer.status == status %}selected{% endif %}>
+                                            {{ display }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Account Information -->
+                        <h5 class="mb-3">Account Information</h5>
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="username" class="form-label">Username</label>
+                                    <input type="text" class="form-control" id="username" value="{{ customer.user.username }}" readonly>
+                                    <div class="small text-muted">Username cannot be changed</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="email" class="form-label">Email Address</label>
+                                    <input type="email" class="form-control" id="email" name="email" 
+                                           value="{{ customer.user.email }}" required>
+                                    <div class="invalid-feedback">
+                                        Please provide a valid email address.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="password" class="form-label">New Password (leave blank to keep current)</label>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="password" name="password">
+                                <button class="btn btn-outline-secondary toggle-password" type="button" 
+                                        data-target="password">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Personal Information -->
+                        <h5 class="mb-3">Personal Information</h5>
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="first_name" class="form-label">First Name</label>
+                                    <input type="text" class="form-control" id="first_name" name="first_name" 
+                                           value="{{ customer.user.first_name }}" required>
+                                    <div class="invalid-feedback">
+                                        Please provide a first name.
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="last_name" class="form-label">Last Name</label>
+                                    <input type="text" class="form-control" id="last_name" name="last_name" 
+                                           value="{{ customer.user.last_name }}" required>
+                                    <div class="invalid-feedback">
+                                        Please provide a last name.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="phone" class="form-label">Phone Number</label>
+                            <input type="tel" class="form-control" id="phone" name="phone" 
+                                   value="{{ customer.phone }}" required>
+                            <div class="invalid-feedback">
+                                Please provide a phone number.
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="address" class="form-label">Address</label>
+                            <textarea class="form-control" id="address" name="address" rows="3" required>{{ customer.address }}</textarea>
+                            <div class="invalid-feedback">
+                                Please provide an address.
+                            </div>
+                        </div>
+                        
+                        <!-- Plan Selection -->
+                        <h5 class="mb-3">Plan Selection</h5>
+                        <div class="mb-4">
+                            <label for="plan" class="form-label">Cable Plan</label>
+                            <select class="form-select" id="plan" name="plan" required>
+                                <option value="">Select a plan</option>
+                                {% for plan in plans %}
+                                <option value="{{ plan.id }}" {% if customer.plan_id == plan.id %}selected{% endif %}>
+                                    {{ plan.name }} - ₱{{ plan.price }}/month
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="invalid-feedback">
+                                Please select a plan.
+                            </div>
+                        </div>
+
+                        <!-- Installation Date and Time -->
+                        <h5 class="mb-3">Installation Date</h5>
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="installation_date" class="form-label">Installation Date</label>
+                                    <input type="date" class="form-control" id="installation_date" name="installation_date"
+                                           value="{{ customer.installation_date|date:'Y-m-d' }}" required>
+                                    <div class="invalid-feedback">
+                                        Please select installation date.
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="installation_time" class="form-label">Installation Time</label>
+                                    <select class="form-select" id="installation_time" name="installation_time" required>
+                                        <option value="">Choose time slot...</option>
+                                        {% for time_slot, display in customer.TIME_SLOT_CHOICES %}
+                                        <option value="{{ time_slot }}" {% if customer.installation_time == time_slot %}selected{% endif %}>
+                                            {{ display }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="invalid-feedback">
+                                        Please select installation time.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Save Changes
+                            </button>
+                            <a href="{% url 'customer_detail' customer_id=customer.id %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Form validation
+    var forms = document.querySelectorAll('.needs-validation');
+    Array.prototype.slice.call(forms).forEach(function(form) {
+        form.addEventListener('submit', function(event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        }, false);
+    });
+    
+    // Toggle password visibility
+    $('.toggle-password').click(function() {
+        var target = $(this).data('target');
+        var input = $('#' + target);
+        var icon = $(this).find('i');
+        
+        if (input.attr('type') === 'password') {
+            input.attr('type', 'text');
+            icon.removeClass('fa-eye').addClass('fa-eye-slash');
+        } else {
+            input.attr('type', 'password');
+            icon.removeClass('fa-eye-slash').addClass('fa-eye');
+        }
+    });
+
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,284 @@
+{% extends 'subscriber/base.html' %}
+{% load static %}
+
+{% block title %}Cable Plans - Cable TV Network{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-light">
+                <div class="card-body p-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h4 class="mb-1">Cable TV Plans</h4>
+                            <p class="mb-0 text-muted">
+                                Choose the perfect plan for your entertainment needs
+                            </p>
+                        </div>
+                        {% if current_plan %}
+                        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                            <div class="d-inline-block p-3 bg-white rounded-3 shadow-sm">
+                                <small class="text-muted d-block">Current Plan</small>
+                                <strong class="text-primary">{{ current_plan.name }}</strong>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Plans Grid -->
+    <div class="row">
+        {% for plan in plans %}
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card plan-card h-100 {% if current_plan.id == plan.id %}border-primary{% endif %}">
+                <!-- Plan Header -->
+                <div class="card-header bg-transparent border-0 pt-4 pb-0">
+                    <h5 class="card-title text-center mb-0">{{ plan.name }}</h5>
+                </div>
+                
+                <!-- Plan Body -->
+                <div class="card-body d-flex flex-column">
+                    <!-- Price Tag -->
+                    <div class="price-tag text-center mb-4">
+                        <span class="currency">₱</span>
+                        <span class="amount">{{ plan.price|floatformat:2 }}</span>
+                        <span class="period">/month</span>
+                    </div>
+
+                    <!-- Channels Badge -->
+                    <div class="channels-badge text-center mb-4">
+                        <span class="badge bg-primary bg-opacity-10 text-primary">
+                            <i class="fas fa-tv me-2"></i>{{ plan.channels }} Channels
+                        </span>
+                    </div>
+
+                    <!-- Features List -->
+                    <div class="features-list mb-4 flex-grow-1">
+                        <div class="features-scroll">
+                            <ul class="list-unstyled mb-0">
+                                {% for feature in plan.feature_list %}
+                                <li class="feature-item">
+                                    <i class="fas fa-check-circle text-success me-2"></i>
+                                    <span>{{ feature }}</span>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Plan Actions -->
+                    <div class="plan-actions mt-auto">
+                        {% if current_plan.id == plan.id %}
+                        <button class="btn btn-outline-primary w-100" disabled>
+                            <i class="fas fa-check me-2"></i>Current Plan
+                        </button>
+                        {% else %}
+                        <a href="{% url 'subscriber:plan_apply' plan.id %}" class="btn btn-primary w-100">
+                            <i class="fas fa-arrow-right me-2"></i>Select Plan
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info text-center">
+                No plans available at the moment. Please check back later.
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Plan Comparison -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">Plan Comparison</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover comparison-table">
+                            <thead>
+                                <tr>
+                                    <th style="min-width: 200px;">Features</th>
+                                    {% for plan in plans %}
+                                    <th class="text-center {% if current_plan.id == plan.id %}current-plan{% endif %}" style="min-width: 180px;">
+                                        <span class="plan-name">{{ plan.name }}</span>
+                                        {% if current_plan.id == plan.id %}
+                                        <span class="badge bg-primary ms-2">Current</span>
+                                        {% endif %}
+                                    </th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="highlight">
+                                    <td>Monthly Price</td>
+                                    {% for plan in plans %}
+                                    <td class="text-center">
+                                        <span class="price">₱{{ plan.price|floatformat:2 }}</span>
+                                    </td>
+                                    {% endfor %}
+                                </tr>
+                                <tr>
+                                    <td>Number of Channels</td>
+                                    {% for plan in plans %}
+                                    <td class="text-center">
+                                        <span class="badge bg-primary bg-opacity-10 text-primary">
+                                            {{ plan.channels }} Channels
+                                        </span>
+                                    </td>
+                                    {% endfor %}
+                                </tr>
+                                <tr>
+                                    <td>Features</td>
+                                    {% for plan in plans %}
+                                    <td class="text-center">
+                                        <div class="comparison-features">
+                                            {% for feature in plan.feature_list %}
+                                            <div class="feature-item-small">
+                                                <i class="fas fa-check text-success me-2"></i>{{ feature }}
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    </td>
+                                    {% endfor %}
+                                </tr>
+                                <tr>
+                                    <td>Action</td>
+                                    {% for plan in plans %}
+                                    <td class="text-center">
+                                        {% if current_plan.id == plan.id %}
+                                        <button class="btn btn-sm btn-outline-primary" disabled>
+                                            <i class="fas fa-check me-2"></i>Current Plan
+                                        </button>
+                                        {% else %}
+                                        <a href="{% url 'subscriber:plan_apply' plan.id %}" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-arrow-right me-2"></i>Select Plan
+                                        </a>
+                                        {% endif %}
+                                    </td>
+                                    {% endfor %}
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .plan-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border-radius: 1rem;
+        overflow: hidden;
+    }
+
+    .plan-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+
+    .price-tag {
+        position: relative;
+        padding: 1rem 0;
+    }
+
+    .price-tag .currency {
+        font-size: 1.25rem;
+        position: relative;
+        top: -1rem;
+    }
+
+    .price-tag .amount {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: var(--primary-color);
+    }
+
+    .price-tag .period {
+        color: var(--secondary-color);
+    }
+
+    .features-list {
+        position: relative;
+        max-height: 300px;
+        overflow: hidden;
+    }
+
+    .features-scroll {
+        max-height: 250px;
+        overflow-y: auto;
+        padding-right: 0.5rem;
+    }
+
+    .features-scroll::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .features-scroll::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 2px;
+    }
+
+    .features-scroll::-webkit-scrollbar-thumb {
+        background: #ccc;
+        border-radius: 2px;
+    }
+
+    .feature-item {
+        padding: 0.5rem;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: flex-start;
+        transition: background-color 0.2s ease;
+    }
+
+    .feature-item:hover {
+        background-color: rgba(37, 99, 235, 0.05);
+        border-radius: 0.5rem;
+    }
+
+    .feature-item i {
+        margin-top: 0.25rem;
+        flex-shrink: 0;
+    }
+
+    .feature-item span {
+        line-height: 1.4;
+    }
+
+    .channels-badge .badge {
+        font-size: 0.9rem;
+        padding: 0.5rem 1rem;
+    }
+
+    /* Fade effect for long feature lists */
+    .features-list::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 40px;
+        background: linear-gradient(to bottom, transparent, white);
+        pointer-events: none;
+    }
+
+    /* Current plan highlight */
+    .plan-card.border-primary {
+        border-width: 2px;
+    }
+</style>
+{% endblock %} 

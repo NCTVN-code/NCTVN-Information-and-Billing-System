@@ -1,0 +1,249 @@
+{% extends 'subscriber/base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - Cable TV Network{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Welcome Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card welcome-card bg-primary text-white">
+                <div class="card-body p-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h4 class="mb-1">Welcome back, {{ user.get_full_name }}!</h4>
+                            <p class="mb-0">
+                                {% if customer.status == 'approved' %}
+                                    Your subscription is active. Enjoy your entertainment!
+                                {% elif customer.status == 'pending' %}
+                                    Your application is under review. We'll notify you soon.
+                                {% else %}
+                                    Please complete your subscription to enjoy our services.
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                            {% if customer.status == 'approved' %}
+                                <a href="{% url 'subscriber:my_plan' %}" class="btn btn-light">
+                                    <i class="fas fa-tv me-2"></i>View My Plan
+                                </a>
+                            {% else %}
+                                <a href="{% url 'subscriber:plan_list' %}" class="btn btn-light">
+                                    <i class="fas fa-list me-2"></i>Browse Plans
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <!-- Current Plan -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary h-100">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Current Plan</div>
+                            <div class="h5 mb-0 font-weight-bold">
+                                {{ current_plan.name|default:"No Active Plan" }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-tv fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Due -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning h-100">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Total Due</div>
+                            <div class="h5 mb-0 font-weight-bold">₱{{ total_due|floatformat:2 }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Next Due Date -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info h-100">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Next Due Date</div>
+                            <div class="h5 mb-0 font-weight-bold">
+                                {% if recent_bills.first %}
+                                    {{ recent_bills.first.due_date|date:"M d, Y" }}
+                                {% else %}
+                                    No Due Date
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-calendar fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Account Status -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success h-100">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Account Status</div>
+                            <div class="h5 mb-0 font-weight-bold">{{ customer.get_status_display }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-user-check fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="row">
+        <!-- Recent Bills -->
+        <div class="col-xl-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">Recent Bills</h6>
+                    <a href="{% url 'subscriber:billing_list' %}" class="btn btn-sm btn-primary">
+                        View All
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Bill Date</th>
+                                    <th>Due Date</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for bill in recent_bills %}
+                                <tr>
+                                    <td>{{ bill.bill_date|date:"M d, Y" }}</td>
+                                    <td>{{ bill.due_date|date:"M d, Y" }}</td>
+                                    <td>₱{{ bill.amount|floatformat:2 }}</td>
+                                    <td>
+                                        <span class="badge {% if bill.status == 'paid' %}bg-success{% elif bill.status == 'overdue' %}bg-danger{% else %}bg-warning{% endif %}">
+                                            {{ bill.get_status_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">No recent bills</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Payments -->
+        <div class="col-xl-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">Recent Payments</h6>
+                    <a href="{% url 'subscriber:payment_list' %}" class="btn btn-sm btn-primary">
+                        View All
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Amount</th>
+                                    <th>Method</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for payment in recent_payments %}
+                                <tr>
+                                    <td>{{ payment.payment_date|date:"M d, Y" }}</td>
+                                    <td>₱{{ payment.amount|floatformat:2 }}</td>
+                                    <td>{{ payment.get_payment_method_display }}</td>
+                                    <td>
+                                        <span class="badge bg-success">Completed</span>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">No recent payments</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .welcome-card {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+        border: none;
+    }
+
+    .border-left-primary {
+        border-left: 4px solid var(--primary-color);
+    }
+
+    .border-left-success {
+        border-left: 4px solid var(--success-color);
+    }
+
+    .border-left-warning {
+        border-left: 4px solid var(--warning-color);
+    }
+
+    .border-left-info {
+        border-left: 4px solid var(--accent-color);
+    }
+
+    .table td {
+        vertical-align: middle;
+    }
+
+    .badge {
+        padding: 0.5em 0.8em;
+        font-weight: 500;
+    }
+</style>
+{% endblock %} 

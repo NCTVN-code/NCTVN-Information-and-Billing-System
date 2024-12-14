@@ -1,0 +1,189 @@
+{% extends 'management_base.html' %}
+{% load static %}
+
+{% block title %}Generate Bill - Cable TV Network{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row gy-4">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">Generate Bill</h6>
+                </div>
+                <div class="card-body">
+                    <!-- Customer Information -->
+                    <div class="mb-4">
+                        <h5 class="mb-3">Customer Information</h5>
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <p><strong>Name:</strong> {{ customer.user.get_full_name }}</p>
+                                        <p><strong>Email:</strong> {{ customer.user.email }}</p>
+                                        <p><strong>Phone:</strong> {{ customer.phone }}</p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <p><strong>Address:</strong> {{ customer.address }}</p>
+                                        <p><strong>Current Plan:</strong> {{ customer.plan.name }}</p>
+                                        <p><strong>Status:</strong> 
+                                            <span class="badge {% if customer.status == 'approved' %}bg-success
+                                                {% elif customer.status == 'pending' %}bg-warning
+                                                {% elif customer.status == 'rejected' %}bg-danger
+                                                {% else %}bg-secondary{% endif %}">
+                                                {{ customer.status|title }}
+                                            </span>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bill Form -->
+                    <form method="POST">
+                        {% csrf_token %}
+
+                        <div class="mb-4">
+                            <div class="row">
+                                <!-- Bill Amount -->
+                                <div class="col-md-12">
+                                    <label for="amount" class="form-label">Bill Amount</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">₱</span>
+                                        <input type="number" class="form-control" id="amount" name="amount"
+                                               step="0.01" min="0" value="{{ customer.plan.price }}"
+                                               required {% if customer.plan.price %}readonly{% endif %}>
+                                    </div>
+                                    <small class="text-muted">
+                                        Current plan price: ₱{{ customer.plan.price }}/month
+                                    </small>
+                                </div>
+
+                                <!-- Bill Date -->
+                                <div class="col-md-6">
+                                    <label for="bill_date" class="form-label">Bill Date</label>
+                                    <input type="date" class="form-control" id="bill_date" name="bill_date" required>
+                                </div>
+
+                                <!-- Due Date -->
+                                <div class="col-md-6">
+                                    <label for="due_date" class="form-label">Due Date</label>
+                                    <input type="date" class="form-control" id="due_date" name="due_date" readonly>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Send Email Notification -->
+                        <div class="mb-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="send_email" 
+                                       name="send_email" checked>
+                                <label class="form-check-label" for="send_email">
+                                    Send bill notification to customer's email
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-file-invoice-dollar me-2"></i>Generate Bill
+                            </button>
+                            <a href="{% url 'customer_detail' customer.id %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <!-- Previous Bills -->
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Previous Bills</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered datatable" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Bill Date</th>
+                                    <th>Due Date</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Payment Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for bill in previous_bills %}
+                                <tr>
+                                    <td>{{ bill.bill_date|date:"M d, Y" }}</td>
+                                    <td>{{ bill.due_date|date:"M d, Y" }}</td>
+                                    <td>${{ bill.amount|floatformat:2 }}</td>
+                                    <td>
+                                        <span class="badge {% if bill.status == 'paid' %}bg-success
+                                            {% elif bill.status == 'unpaid' %}bg-warning
+                                            {% else %}bg-danger{% endif %}">
+                                            {{ bill.status|title }}
+                                        </span>
+                                    </td>
+                                    <td>{{ bill.payment_date|date:"M d, Y"|default:"---" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center">No previous bills found</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Initialize DataTable
+    initializeDataTable('.datatable', {
+        order: [[0, 'desc']], // Sort by bill date by default
+        pageLength: 5
+    });
+
+    // Set initial bill date to today and calculate due date
+    var today = new Date();
+    $('#bill_date').val(today.toISOString().split('T')[0]);
+    updateDueDate();
+
+    // Handle bill date changes
+    $('#bill_date').on('change', function() {
+        updateDueDate();
+    });
+
+    function updateDueDate() {
+        var billDate = new Date($('#bill_date').val());
+        var dueDate = new Date(billDate);
+        dueDate.setDate(dueDate.getDate() + 30); // Set due date to 30 days after bill date
+        
+        // Format the date as YYYY-MM-DD
+        var dueDateFormatted = dueDate.toISOString().split('T')[0];
+        $('#due_date').val(dueDateFormatted);
+    }
+});
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-check-input:checked {
+        background-color: #1cc88a;
+        border-color: #1cc88a;
+    }
+</style>
+{% endblock %} 

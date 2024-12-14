@@ -1,0 +1,160 @@
+{% extends 'management_base.html' %}
+{% load static %}
+
+{% block title %}Record Payment - Cable TV Network{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row gy-4">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">Record Payment</h6>
+                    <span class="badge bg-warning">Pending Payment</span>
+                </div>
+                <div class="card-body">
+                    <!-- Bill Information -->
+                    <div class="mb-4">
+                        <h5 class="mb-3">Bill Information</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Bill ID:</strong> #{{ bill.id }}</p>
+                                <p><strong>Customer:</strong> {{ bill.customer.user.get_full_name }}</p>
+                                <p><strong>Amount Due:</strong> ₱{{ bill.amount|floatformat:2 }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Bill Date:</strong> {{ bill.bill_date|date:"M d, Y" }}</p>
+                                <p><strong>Due Date:</strong> {{ bill.due_date|date:"M d, Y" }}</p>
+                                <p><strong>Status:</strong>
+                                    <span class="badge {% if bill.status == 'paid' %}bg-success
+                                                {% elif bill.status == 'unpaid' %}bg-warning
+                                                {% else %}bg-danger{% endif %}">
+                                                {{ bill.status|title }}
+                                            </span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Payment Form -->
+                    <form method="POST" class="mt-4">
+                        {% csrf_token %}
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="amount" class="form-label">Payment Amount</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">₱</span>
+                                        <input type="number" class="form-control" id="amount" name="amount"
+                                               step="0.01" value="{{ bill.amount }}" readonly required>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="payment_method" class="form-label">Payment Method</label>
+                                    <select class="form-select" id="payment_method" name="payment_method" required>
+                                        <option value="">---Select---</option>
+                                        <option value="cash">Cash</option>
+                                        <option value="card">Card</option>
+                                        <option value="bank_transfer">Bank Transfer</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="transaction_id" class="form-label">Transaction ID</label>
+                                    <input type="text" class="form-control" id="transaction_id" name="transaction_id"
+                                           placeholder="Enter transaction ID or reference number" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-check me-2"></i>Record Payment
+                            </button>
+                            <a href="{% url 'bill_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <!-- Payment History -->
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Customer's Payment History</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered datatable" width="100%" cellspacing="0">
+                            <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Amount</th>
+                                <th>Method</th>
+                                <th>Transaction ID</th>
+                                <th>Status</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for payment in previous_payments %}
+                            <tr>
+                                <td>{{ payment.payment_date|date:"M d, Y" }}</td>
+                                <td>₱{{ payment.amount|floatformat:2 }}</td>
+                                <td>{{ payment.payment_method|title }}</td>
+                                <td>{{ payment.transaction_id }}</td>
+                                <td>
+                                    <span class="badge bg-success">Completed</span>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center">No payment history available</td>
+                            </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Initialize DataTable
+        initializeDataTable('.datatable', {
+            order: [[0, 'desc']], // Sort by date by default
+            pageLength: 5
+        });
+
+        // Auto-generate Transaction ID
+        function generateTransactionId() {
+            const timestamp = new Date().getTime().toString().slice(-6);
+            const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+            return `TXN${timestamp}${random}`;
+        }
+
+        // Set initial transaction ID
+        if (!$('#transaction_id').val()) {
+            $('#transaction_id').val(generateTransactionId());
+        }
+
+        // Update transaction ID when payment method changes
+        $('#payment_method').change(function() {
+            if (!$('#transaction_id').val() || $('#transaction_id').val().startsWith('TXN')) {
+                $('#transaction_id').val(generateTransactionId());
+            }
+        });
+    });
+</script>
+{% endblock %}

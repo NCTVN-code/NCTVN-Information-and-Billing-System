@@ -1,0 +1,215 @@
+{% extends 'subscriber/base.html' %}
+{% load static %}
+
+{% block title %}Make Payment - Cable TV Network{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <nav aria-label="breadcrumb">
+                                <ol class="breadcrumb mb-2">
+                                    <li class="breadcrumb-item">
+                                        <a href="{% url 'subscriber:billing_list' %}">Bills</a>
+                                    </li>
+                                    <li class="breadcrumb-item active">Make Payment</li>
+                                </ol>
+                            </nav>
+                            <h4 class="mb-1">Make Payment</h4>
+                            <p class="mb-0 text-muted">
+                                Complete your payment for Bill #{{ bill.id }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Payment Form -->
+        <div class="col-lg-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Payment Details</h6>
+                </div>
+                <div class="card-body">
+                    <form method="POST" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        
+                        <!-- Amount Information -->
+                        <div class="mb-4">
+                            <label class="form-label text-muted">Amount to Pay</label>
+                            <div class="form-control-lg bg-light rounded p-3">
+                                <h3 class="mb-0 text-primary">₱{{ bill.amount|floatformat:2 }}</h3>
+                            </div>
+                        </div>
+
+                        <!-- Payment Method -->
+                        <div class="mb-4">
+                            <label for="payment_method" class="form-label">Payment Method</label>
+                            <select class="form-select" id="payment_method" name="payment_method" required>
+                                <option value="">Select payment method</option>
+                                <option value="cash">Cash</option>
+                                <option value="card">Credit/Debit Card</option>
+                                <option value="bank_transfer">Bank Transfer</option>
+                            </select>
+                            <div class="invalid-feedback">
+                                Please select a payment method.
+                            </div>
+                        </div>
+
+                        <!-- Payment Instructions -->
+                        <div class="payment-instructions mb-4 d-none" id="cashInstructions">
+                            <div class="alert alert-info">
+                                <h6 class="alert-heading"><i class="fas fa-info-circle me-2"></i>Cash Payment Instructions</h6>
+                                <p class="mb-0">Please visit our office to make your cash payment. Bring this reference number: <strong>{{ bill.id }}</strong></p>
+                            </div>
+                        </div>
+
+                        <div class="payment-instructions mb-4 d-none" id="cardInstructions">
+                            <div class="alert alert-info">
+                                <h6 class="alert-heading"><i class="fas fa-credit-card me-2"></i>Card Payment Instructions</h6>
+                                <p class="mb-0">You will be redirected to our secure payment gateway to complete your card payment.</p>
+                            </div>
+                        </div>
+
+                        <div class="payment-instructions mb-4 d-none" id="bankInstructions">
+                            <div class="alert alert-info">
+                                <h6 class="alert-heading"><i class="fas fa-university me-2"></i>Bank Transfer Instructions</h6>
+                                <p class="mb-0">
+                                    Please transfer the amount to:<br>
+                                    Bank: Sample Bank<br>
+                                    Account Name: Cable TV Network<br>
+                                    Account Number: 1234-5678-9012<br>
+                                    Reference: Bill #{{ bill.id }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Terms and Conditions -->
+                        <div class="mb-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="terms" required>
+                                <label class="form-check-label" for="terms">
+                                    I agree to the <a href="#">Terms and Conditions</a> of payment
+                                </label>
+                                <div class="invalid-feedback">
+                                    <i class="fas fa-info-circle me-1"></i>You must agree before submitting.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-lock me-2"></i>Proceed to Payment
+                            </button>
+                            <a href="{% url 'subscriber:billing_list' %}" class="btn btn-light">
+                                Cancel Payment
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bill Summary -->
+        <div class="col-lg-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Bill Summary</h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless">
+                        <tr>
+                            <td class="text-muted">Bill Number:</td>
+                            <td class="text-end fw-bold">#{{ bill.id }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Bill Date:</td>
+                            <td class="text-end">{{ bill.bill_date|date:"M d, Y" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Due Date:</td>
+                            <td class="text-end">{{ bill.due_date|date:"M d, Y" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Plan:</td>
+                            <td class="text-end">{{ bill.customer.plan.name }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Status:</td>
+                            <td class="text-end">
+                                <span class="badge bg-warning">Unpaid</span>
+                            </td>
+                        </tr>
+                    </table>
+                    <hr>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="h6 mb-0 text-muted">Total Amount</span>
+                        <span class="h4 mb-0 text-primary">₱{{ bill.amount|floatformat:2 }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Show/hide payment instructions based on selected method
+    $('#payment_method').change(function() {
+        $('.payment-instructions').addClass('d-none');
+        const method = $(this).val();
+        if (method) {
+            $(`#${method}Instructions`).removeClass('d-none');
+        }
+    });
+
+    // Form validation
+    var form = document.querySelector('.needs-validation');
+    form.addEventListener('submit', function(event) {
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+    }, false);
+});
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-control-lg {
+        border: none;
+    }
+
+    .payment-instructions {
+        transition: all 0.3s ease;
+    }
+
+    .alert {
+        border: none;
+        border-radius: 0.5rem;
+    }
+
+    .form-check-input:checked {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+
+    .btn-lg {
+        padding: 1rem 1.5rem;
+        font-size: 1.1rem;
+    }
+</style>
+{% endblock %} 
