@@ -425,11 +425,8 @@ def register_view(request):
                 address=address
             )
             
-            # Log the user in
-            login(request, user)
-            
             messages.success(request, 'Account created successfully! Welcome to Cable TV Network.')
-            return redirect('subscriber:dashboard')
+            return redirect('subscriber:login')
             
         except Exception as e:
             messages.error(request, 'An error occurred while creating your account. Please try again.')

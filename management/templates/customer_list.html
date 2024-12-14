@@ -68,7 +68,7 @@
                                        class="btn btn-sm btn-danger" title="Delete Customer">
                                         <i class="fas fa-trash"></i>
                                     </a>
-                                    {% if customer.status == 'pending' %}
+                                    {% if customer.status == 'pending' and customer.plan %}
                                     <a href="{% url 'customer_application' customer_id=customer.id %}" 
                                        class="btn btn-sm btn-warning" title="Review Application">
                                         <i class="fas fa-clipboard-check"></i>
