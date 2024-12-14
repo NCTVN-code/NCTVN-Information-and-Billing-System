@@ -10,9 +10,7 @@ env/
 db.sqlite3
 
 # Ignore Django migrations
-*/migrations/*.pyc
-*/migrations/*.pyo
-*/migrations/*.log
+*/migrations/*
 
 # Ignore IDE specific files
 .vscode/
