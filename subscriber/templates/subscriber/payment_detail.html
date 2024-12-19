@@ -20,7 +20,7 @@
                                     <li class="breadcrumb-item active">Payment Details</li>
                                 </ol>
                             </nav>
-                            <h4 class="mb-1">Payment #{{ payment.transaction_id }}</h4>
+                            <h4 class="mb-1">Payment #{{ payment.transaction_id|truncatechars:20 }}</h4>
                             <p class="mb-0 text-muted">
                                 Transaction details and receipt information
                             </p>
@@ -50,7 +50,7 @@
                             <table class="table table-borderless">
                                 <tr>
                                     <td class="text-muted pe-2">Transaction ID:</td>
-                                    <td class="fw-bold">{{ payment.transaction_id }}</td>
+                                    <td class="fw-bold">{{ payment.transaction_id|truncatechars:20 }}</td>
                                 </tr>
                                 <tr>
                                     <td class="text-muted pe-2">Amount:</td>

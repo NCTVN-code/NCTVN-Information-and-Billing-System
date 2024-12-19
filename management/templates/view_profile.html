@@ -17,13 +17,13 @@
                 </div>
                 <div class="card-body">
                     <div class="text-center mb-4">
-                        {% if user.profile_picture %}
-                            <img src="{% static user.profile_picture %}" alt="Profile Picture" 
-                                 class="img-profile rounded-circle mb-3" style="width: 150px; height: 150px;">
-                        {% else %}
-                            <img src="https://via.placeholder.com/150" alt="Default Profile" 
-                                 class="img-profile rounded-circle mb-3">
-                        {% endif %}
+<!--                        {% if user.profile_picture %}-->
+<!--                            <img src="{% static user.profile_picture %}" alt="Profile Picture" -->
+<!--                                 class="img-profile rounded-circle mb-3" style="width: 150px; height: 150px;">-->
+<!--                        {% else %}-->
+<!--                            <img src="https://via.placeholder.com/150" alt="Default Profile" -->
+<!--                                 class="img-profile rounded-circle mb-3">-->
+<!--                        {% endif %}-->
                         <h4 class="mb-1">{{ user.get_full_name }}</h4>
                         <p class="text-muted mb-3">Administrator</p>
                         <div class="small text-muted">
@@ -116,33 +116,33 @@
             </div>
 
             <!-- Account Security -->
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Account Security</h6>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-4">
-                                <h6 class="font-weight-bold mb-2">Password</h6>
-                                <p class="text-muted mb-2">Last changed: Never</p>
-                                <a href="{% url 'edit_admin_profile' %}#password" class="btn btn-sm btn-primary">
-                                    <i class="fas fa-key me-2"></i>Change Password
-                                </a>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-4">
-                                <h6 class="font-weight-bold mb-2">Two-Factor Authentication</h6>
-                                <p class="text-muted mb-2">Status: Not Enabled</p>
-                                <button class="btn btn-sm btn-secondary" disabled>
-                                    <i class="fas fa-lock me-2"></i>Enable 2FA
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+<!--            <div class="card shadow mb-4">-->
+<!--                <div class="card-header py-3">-->
+<!--                    <h6 class="m-0 font-weight-bold text-primary">Account Security</h6>-->
+<!--                </div>-->
+<!--                <div class="card-body">-->
+<!--                    <div class="row">-->
+<!--                        <div class="col-md-6">-->
+<!--                            <div class="mb-4">-->
+<!--                                <h6 class="font-weight-bold mb-2">Password</h6>-->
+<!--                                <p class="text-muted mb-2">Last changed: Never</p>-->
+<!--                                <a href="{% url 'edit_admin_profile' %}#password" class="btn btn-sm btn-primary">-->
+<!--                                    <i class="fas fa-key me-2"></i>Change Password-->
+<!--                                </a>-->
+<!--                            </div>-->
+<!--                        </div>-->
+<!--                        <div class="col-md-6">-->
+<!--                            <div class="mb-4">-->
+<!--                                <h6 class="font-weight-bold mb-2">Two-Factor Authentication</h6>-->
+<!--                                <p class="text-muted mb-2">Status: Not Enabled</p>-->
+<!--                                <button class="btn btn-sm btn-secondary" disabled>-->
+<!--                                    <i class="fas fa-lock me-2"></i>Enable 2FA-->
+<!--                                </button>-->
+<!--                            </div>-->
+<!--                        </div>-->
+<!--                    </div>-->
+<!--                </div>-->
+<!--            </div>-->
         </div>
     </div>
 </div>
@@ -150,11 +150,11 @@
 
 {% block extra_css %}
 <style>
-    .img-profile {
-        object-fit: cover;
-        border: 3px solid #fff;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    }
+<!--    .img-profile {-->
+<!--        object-fit: cover;-->
+<!--        border: 3px solid #fff;-->
+<!--        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);-->
+<!--    }-->
     
     .timeline {
         position: relative;

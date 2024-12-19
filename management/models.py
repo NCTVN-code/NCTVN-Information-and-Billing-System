@@ -59,14 +59,19 @@ class Bill(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    reminder_notification_sent = models.BooleanField(default=False)
+    overdue_notification_sent = models.BooleanField(default=False)
+    warning_notification_sent = models.BooleanField(default=False)
+    disconnection_notification_sent = models.BooleanField(default=False)
+
     def __str__(self):
         return f"Bill for {self.customer.user.get_full_name()} - {self.bill_date}"
 
 class Payment(models.Model):
     PAYMENT_METHOD_CHOICES = [
         ('cash', 'Cash'),
-        ('card', 'Card'),
-        ('bank_transfer', 'Bank Transfer')
+        ('gcash', 'GCash'),
+        ('stripe', 'Stripe')
     ]
 
     bill = models.ForeignKey(Bill, on_delete=models.CASCADE)

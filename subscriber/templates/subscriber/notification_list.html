@@ -14,7 +14,7 @@
                         <div>
                             <h4 class="mb-1">Notifications</h4>
                             <p class="mb-0 text-muted">
-                                Stay updated with important announcements and alerts
+                                View and manage your notifications and alerts
                             </p>
                         </div>
                         <div>
@@ -62,18 +62,12 @@
                                     </div>
                                 </div>
                                 <div class="col-auto">
-                                    <div class="notification-actions">
-                                        <a href="{% url 'subscriber:notification_detail' notification.id %}" 
-                                           class="btn btn-sm btn-light">
-                                            View Details
-                                        </a>
-                                        {% if not notification.is_read %}
-                                        <button class="btn btn-sm btn-outline-primary mark-read" 
-                                                data-id="{{ notification.id }}">
-                                            <i class="fas fa-check"></i>
-                                        </button>
-                                        {% endif %}
-                                    </div>
+                                    {% if not notification.is_read %}
+                                    <button class="btn btn-sm btn-outline-primary mark-read-btn" 
+                                            data-notification-id="{{ notification.id }}">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
@@ -144,10 +138,6 @@
         justify-content: center;
     }
 
-    .notification-actions .btn {
-        margin-left: 0.5rem;
-    }
-
     .bg-primary-subtle {
         background-color: rgba(37, 99, 235, 0.1);
     }
@@ -179,36 +169,65 @@
 {% block extra_js %}
 <script>
 $(document).ready(function() {
-    // Mark single notification as read
-    $('.mark-read').click(function() {
-        const notificationId = $(this).data('id');
-        const $item = $(this).closest('.notification-item');
-        
-        $.post('/subscriber/notifications/' + notificationId + '/mark-read/', {
-            'csrfmiddlewaretoken': '{{ csrf_token }}'
-        })
-        .done(function() {
-            $item.removeClass('unread');
-            $(this).remove();
-        })
-        .fail(function() {
-            alert('Failed to mark notification as read');
-        });
-    });
+    // Setup CSRF token for AJAX requests
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
 
     // Mark all notifications as read
     $('#markAllRead').click(function() {
-        $.post('/subscriber/notifications/mark-all-read/', {
-            'csrfmiddlewaretoken': '{{ csrf_token }}'
-        })
-        .done(function() {
-            $('.notification-item').removeClass('unread');
-            $('.mark-read').remove();
-        })
-        .fail(function() {
-            alert('Failed to mark all notifications as read');
+        $.ajax({
+            url: '{% url "subscriber:mark_notifications_read" %}',
+            type: 'POST',
+            headers: {'X-CSRFToken': csrftoken},
+            success: function(response) {
+                if (response.status === 'success') {
+                    // Remove unread styling and buttons
+                    $('.notification-item.unread').removeClass('unread');
+                    $('.mark-read-btn').remove();
+                    // Reload the page to show Django message
+                    window.location.reload();
+                }
+            },
+            error: function() {
+                window.location.reload();
+            }
+        });
+    });
+
+    // Mark individual notification as read
+    $('.mark-read-btn').click(function() {
+        const btn = $(this);
+        const notificationId = btn.data('notification-id');
+        
+        $.ajax({
+            url: "{% url 'subscriber:mark_notification_read' 0 %}".replace('0', notificationId),
+            type: 'POST',
+            headers: {'X-CSRFToken': csrftoken},
+            success: function(response) {
+                if (response.status === 'success') {
+                    // Remove unread styling and button
+                    btn.closest('.notification-item').removeClass('unread');
+                    btn.remove();
+                }
+            },
+            error: function() {
+                console.error('Error marking notification as read');
+            }
         });
     });
 });
 </script>
-{% endblock %} 
+{% endblock %}

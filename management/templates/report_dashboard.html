@@ -7,7 +7,7 @@
 <div class="container-fluid">
     <!-- Statistics Cards -->
     <div class="row mb-4">
-        <div class="col-xl-3 col-md-6 mb-4">
+        <div class="col-md-4 mb-4">
             <div class="card border-left-primary h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
@@ -24,7 +24,7 @@
             </div>
         </div>
 
-        <div class="col-xl-3 col-md-6 mb-4">
+        <div class="col-md-4 mb-4">
             <div class="card border-left-warning h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
@@ -41,24 +41,7 @@
             </div>
         </div>
 
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-danger h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
-                                Disconnected Accounts</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ disconnected_accounts }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-user-slash fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6 mb-4">
+        <div class="col-md-4 mb-4">
             <div class="card border-left-success h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
@@ -127,11 +110,6 @@
                                 Unpaid Subscribers
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" id="disconnected-tab" data-bs-toggle="tab" href="#disconnected" role="tab">
-                                Disconnected Accounts
-                            </a>
-                        </li>
                     </ul>
                     <div class="tab-content mt-4" id="reportTabContent">
                         <!-- Paid Subscribers Tab -->
@@ -185,34 +163,6 @@
                                             <td>{{ customer.bill.due_date|date:"M d, Y" }}</td>
                                             <td>${{ customer.bill.amount|floatformat:2 }}</td>
                                             <td>{{ customer.days_overdue }}</td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        
-                        <!-- Disconnected Accounts Tab -->
-                        <div class="tab-pane fade" id="disconnected" role="tabpanel">
-                            <div class="table-responsive">
-                                <table class="table table-bordered datatable" width="100%" cellspacing="0">
-                                    <thead>
-                                        <tr>
-                                            <th>Customer</th>
-                                            <th>Last Plan</th>
-                                            <th>Disconnection Date</th>
-                                            <th>Reason</th>
-                                            <th>Outstanding Balance</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for customer in disconnected_accounts_list %}
-                                        <tr>
-                                            <td>{{ customer.user.get_full_name }}</td>
-                                            <td>{{ customer.last_plan }}</td>
-                                            <td>{{ customer.disconnection_date|date:"M d, Y" }}</td>
-                                            <td>{{ customer.disconnection_reason }}</td>
-                                            <td>${{ customer.outstanding_balance|floatformat:2 }}</td>
                                         </tr>
                                         {% endfor %}
                                     </tbody>
@@ -276,15 +226,14 @@ $(document).ready(function() {
     var subscriberPieChart = new Chart(pieCtx, {
         type: 'doughnut',
         data: {
-            labels: ['Paid', 'Unpaid', 'Disconnected'],
+            labels: ['Paid', 'Unpaid'],
             datasets: [{
                 data: [
                     {{ paid_subscribers }},
-                    {{ unpaid_subscribers }},
-                    {{ disconnected_accounts }}
+                    {{ unpaid_subscribers }}
                 ],
-                backgroundColor: ['#1cc88a', '#f6c23e', '#e74a3b'],
-                hoverBackgroundColor: ['#17a673', '#dda20a', '#be2617'],
+                backgroundColor: ['#1cc88a', '#f6c23e'],
+                hoverBackgroundColor: ['#17a673', '#dda20a'],
                 hoverBorderColor: "rgba(234, 236, 244, 1)",
             }]
         },

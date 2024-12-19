@@ -1,17 +1,19 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
-from django.contrib import messages
-from django.db.models import Sum, Count
-from django.core.mail import send_mail
+from datetime import timedelta
+
 from django.conf import settings
-from django.utils import timezone
-from .models import CablePlan, Customer, Bill, Payment, Notification
+from django.contrib import messages
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from datetime import datetime, timedelta
-import os
+from django.core.mail import send_mail
 from django.db import transaction  # Add this import at the top
+from django.db.models import Sum, Count
 from django.db.models.functions import TruncMonth
+from django.shortcuts import render, redirect, get_object_or_404
+from django.utils import timezone
+
+from .models import CablePlan, Customer, Bill, Payment, Notification
+
 
 def login_view(request):
     if request.user.is_authenticated:
@@ -37,11 +39,13 @@ def login_view(request):
 
     return render(request, 'login.html')
 
+
 @login_required(login_url='admin_login')
 def logout_view(request):
     logout(request)
     messages.success(request, 'You have been successfully logged out.')
     return redirect('admin_login')
+
 
 @login_required(login_url='admin_login')
 def view_profile(request):
@@ -53,6 +57,7 @@ def view_profile(request):
         'recent_activities': get_recent_activities(),
     }
     return render(request, 'view_profile.html', context)
+
 
 @login_required(login_url='admin_login')
 def edit_profile(request):
@@ -81,23 +86,23 @@ def edit_profile(request):
                 messages.error(request, 'Current password is incorrect.')
                 return redirect('edit_admin_profile')
 
-        # Profile Picture
-        if 'profile_picture' in request.FILES:
-            profile_pic = request.FILES['profile_picture']
-            # Define allowed extensions
-            allowed_extensions = ['.jpg', '.jpeg', '.png']
-            # Get file extension
-            _, ext = os.path.splitext(profile_pic.name)
-            if ext.lower() not in allowed_extensions:
-                messages.error(request, 'Invalid file type. Please upload a JPG or PNG image.')
-                return redirect('edit_admin_profile')
-
-            # Save the file
-            file_path = f'media/profile_pics/{user.username}{ext}'
-            with open(file_path, 'wb+') as destination:
-                for chunk in profile_pic.chunks():
-                    destination.write(chunk)
-            user.profile_picture = f'profile_pics/{user.username}{ext}'
+        # # Profile Picture
+        # if 'profile_picture' in request.FILES:
+        #     profile_pic = request.FILES['profile_picture']
+        #     # Define allowed extensions
+        #     allowed_extensions = ['.jpg', '.jpeg', '.png']
+        #     # Get file extension
+        #     _, ext = os.path.splitext(profile_pic.name)
+        #     if ext.lower() not in allowed_extensions:
+        #         messages.error(request, 'Invalid file type. Please upload a JPG or PNG image.')
+        #         return redirect('edit_admin_profile')
+        #
+        #     # Save the file
+        #     file_path = f'media/profile_pics/{user.username}{ext}'
+        #     with open(file_path, 'wb+') as destination:
+        #         for chunk in profile_pic.chunks():
+        #             destination.write(chunk)
+        #     user.profile_picture = f'profile_pics/{user.username}{ext}'
 
         user.save()
 
@@ -109,6 +114,7 @@ def edit_profile(request):
         return redirect('view_admin_profile')
 
     return render(request, 'edit_profile.html', {'user': user})
+
 
 def get_recent_activities():
     # Get last 10 activities
@@ -150,6 +156,7 @@ def get_recent_activities():
     # Sort all activities by date
     activities.sort(key=lambda x: x['date'], reverse=True)
     return activities[:10]  # Return only the 10 most recent activities
+
 
 @login_required(login_url='admin_login')
 def admin_dashboard(request):
@@ -203,8 +210,8 @@ def admin_dashboard(request):
         .order_by('-count')
     )
 
-    payment_method_labels = [entry['payment_method'].replace('_', ' ').title() 
-                           for entry in payment_methods]
+    payment_method_labels = [entry['payment_method'].replace('_', ' ').title()
+                             for entry in payment_methods]
     payment_method_data = [entry['count'] for entry in payment_methods]
 
     context = {
@@ -224,11 +231,13 @@ def admin_dashboard(request):
     }
     return render(request, 'admin_dashboard.html', context)
 
+
 # Customer Management Views
 @login_required(login_url='admin_login')
 def customer_list(request):
     customers = Customer.objects.select_related('user', 'plan').all()
     return render(request, 'customer_list.html', {'customers': customers})
+
 
 @login_required(login_url='admin_login')
 def customer_detail(request, customer_id):
@@ -241,6 +250,7 @@ def customer_detail(request, customer_id):
         'payments': payments
     })
 
+
 @login_required(login_url='admin_login')
 def customer_application(request, customer_id):
     customer = get_object_or_404(Customer, id=customer_id)
@@ -251,11 +261,11 @@ def customer_application(request, customer_id):
             customer.status = 'approved'
             notification_type = 'application'
             message = 'Your application has been approved!'
-            
+
             # Generate the first bill
             bill_date = timezone.now().date()
             due_date = bill_date + timedelta(days=30)  # Due in 30 days
-            
+
             # Create the bill
             Bill.objects.create(
                 customer=customer,
@@ -264,14 +274,36 @@ def customer_application(request, customer_id):
                 due_date=due_date,
                 status='unpaid'
             )
-            
+
             # Add bill information to notification
             message += f'\nYour first bill of ₱{customer.plan.price} has been generated. Due date: {due_date.strftime("%B %d, %Y")}'
-            
+
+            # Update email message to be more professional
+            email_message = f"""Dear {customer.user.get_full_name()},
+
+We are pleased to inform you that your cable TV service application has been approved. Your service will be installed on {customer.installation_date} at {customer.installation_time}.
+
+Your first bill of ₱{customer.plan.price} has been generated and is due on {due_date.strftime("%B %d, %Y")}.
+
+Thank you for choosing our service.
+
+Best regards,
+Kabacan Northwest Cable TV Network Team"""
+
         elif action == 'reject':
             customer.status = 'rejected'
             notification_type = 'application'
             message = 'Your application has been rejected.'
+
+            # Update email message
+            email_message = f"""Dear {customer.user.get_full_name()},
+                
+We regret to inform you that we are unable to approve your cable TV service application at this time.
+
+If you have any questions, please don't hesitate to contact us.
+
+Best regards,
+Kabacan Northwest Cable TV Network Team"""
 
         customer.save()
 
@@ -285,10 +317,10 @@ def customer_application(request, customer_id):
 
         # Send email
         send_mail(
-            'Application Status Update',
-            message,
-            settings.DEFAULT_FROM_EMAIL,
-            [customer.user.email],
+            subject='Application Status Update',
+            message=email_message,
+            from_email=settings.EMAIL_HOST_USER,
+            recipient_list=[customer.user.email],
             fail_silently=True,
         )
 
@@ -296,6 +328,7 @@ def customer_application(request, customer_id):
         return redirect('customer_list')
 
     return render(request, 'customer_application.html', {'customer': customer})
+
 
 @login_required(login_url='admin_login')
 def customer_add(request):
@@ -340,7 +373,7 @@ def customer_add(request):
             Notification.objects.create(
                 customer=customer,
                 type='application',
-                title='Welcome to Cable TV Network',
+                title='Welcome to Kabacan Northwest Cable TV Network',
                 message=f'Thank you for registering with us! Your application is under review.'
             )
 
@@ -356,6 +389,7 @@ def customer_add(request):
 
     return render(request, 'customer_add.html', {'plans': plans})
 
+
 @login_required(login_url='admin_login')
 def customer_edit(request, customer_id):
     customer = get_object_or_404(Customer, id=customer_id)
@@ -363,10 +397,29 @@ def customer_edit(request, customer_id):
 
     if request.method == 'POST':
         try:
+            # Get the new email and username from the form
+            new_email = request.POST.get('email')
+            new_username = request.POST.get('username')
+
+            # Check if email exists and belongs to a different user
+            if (User.objects.filter(email=new_email)
+                    .exclude(id=customer.user.id)
+                    .exists()):
+                messages.error(request, 'Email already exists for another user.')
+                return redirect('customer_edit', customer_id=customer_id)
+
+            # Check if username exists and belongs to a different user
+            if (User.objects.filter(username=new_username)
+                    .exclude(id=customer.user.id)
+                    .exists()):
+                messages.error(request, 'Username already exists for another user.')
+                return redirect('customer_edit', customer_id=customer_id)
+
             # Update User information
+            customer.user.username = new_username
             customer.user.first_name = request.POST.get('first_name')
             customer.user.last_name = request.POST.get('last_name')
-            customer.user.email = request.POST.get('email')
+            customer.user.email = new_email
 
             # Update password if provided
             new_password = request.POST.get('password')
@@ -380,22 +433,8 @@ def customer_edit(request, customer_id):
             customer.phone = request.POST.get('phone')
             customer.plan_id = request.POST.get('plan')
             customer.status = request.POST.get('status')
-
-            # Update installation date and time
             customer.installation_date = request.POST.get('installation_date')
             customer.installation_time = request.POST.get('installation_time')
-
-            # # If status is changing to approved and connection_date is not set
-            # if new_status == 'approved' and customer.status != 'approved' and not customer.connection_date:
-            #     customer.connection_date = timezone.now()
-            #
-            #     # Create notification for approval
-            #     Notification.objects.create(
-            #         customer=customer,
-            #         type='application',
-            #         title='Application Approved',
-            #         message='Your cable TV connection application has been approved!'
-            #     )
 
             customer.save()
 
@@ -404,11 +443,13 @@ def customer_edit(request, customer_id):
 
         except Exception as e:
             messages.error(request, f'Error updating customer: {str(e)}')
+            return redirect('customer_edit', customer_id=customer_id)
 
     return render(request, 'customer_edit.html', {
         'customer': customer,
         'plans': plans
     })
+
 
 @login_required(login_url='admin_login')
 def customer_delete(request, customer_id):
@@ -445,6 +486,7 @@ def customer_delete(request, customer_id):
         'customer': customer,
         'bills_exist': bills_exist
     })
+
 
 # Plan Management Views
 @login_required(login_url='admin_login')
@@ -487,6 +529,7 @@ def plan_list(request):
     plans = CablePlan.objects.all()
     return render(request, 'plan_list.html', {'plans': plans})
 
+
 # Billing Views
 @login_required(login_url='admin_login')
 def bill_list(request):
@@ -525,6 +568,7 @@ def bill_list(request):
     }
     return render(request, 'bill_list.html', context)
 
+
 @login_required(login_url='admin_login')
 def generate_bill(request, customer_id):
     customer = get_object_or_404(Customer, id=customer_id)
@@ -553,6 +597,27 @@ def generate_bill(request, customer_id):
             message=f'A new bill of ₱{amount} has been generated. Due date: {due_date}'
         )
 
+        # After bill creation, send email
+        email_message = f"""Dear {customer.user.get_full_name()},
+
+Your cable TV service bill for {bill_date} has been generated.
+
+Amount Due: ₱{amount}
+Due Date: {due_date}
+
+Please ensure timely payment to avoid service interruption.
+
+Best regards,
+Kabacan Northwest Cable TV Network Team"""
+
+        send_mail(
+            subject='New Bill Generated',
+            message=email_message,
+            from_email=settings.EMAIL_HOST_USER,
+            recipient_list=[customer.user.email],
+            fail_silently=True,
+        )
+
         messages.success(request, 'Bill generated successfully.')
         return redirect('bill_list')
 
@@ -561,6 +626,7 @@ def generate_bill(request, customer_id):
         'previous_bills': previous_bills,
     }
     return render(request, 'generate_bill.html', context)
+
 
 @login_required(login_url='admin_login')
 def edit_bill(request, bill_id):
@@ -583,6 +649,7 @@ def edit_bill(request, bill_id):
 
     return redirect('bill_list')
 
+
 @login_required(login_url='admin_login')
 def delete_bill(request, bill_id):
     bill = get_object_or_404(Bill, id=bill_id)
@@ -596,6 +663,7 @@ def delete_bill(request, bill_id):
             messages.error(request, f'Error deleting bill: {str(e)}')
 
     return redirect('bill_list')
+
 
 # Payment Views
 @login_required(login_url='admin_login')
@@ -645,6 +713,7 @@ def payment_list(request):
 
     return render(request, 'payment_list.html', context)
 
+
 @login_required(login_url='admin_login')
 def record_payment(request, bill_id):
     bill = get_object_or_404(Bill, id=bill_id)
@@ -678,20 +747,23 @@ def record_payment(request, bill_id):
             message=f'Payment of ₱{amount} received for bill dated {bill.bill_date.strftime("%Y-%m-%d")}'
         )
 
-        # # Send email receipt if requested
-        # if send_receipt:
-        #     send_mail(
-        #         'Payment Receipt - Cable TV Network',
-        #         f'Thank you for your payment of ₱{amount}.\n\n'
-        #         f'Transaction Details:\n'
-        #         f'Bill ID: #{bill.id}\n'
-        #         f'Payment Date: {timezone.now().strftime("%Y-%m-%d")}\n'
-        #         f'Payment Method: {payment_method}\n'
-        #         f'Transaction ID: {transaction_id}',
-        #         settings.DEFAULT_FROM_EMAIL,
-        #         [bill.customer.user.email],
-        #         fail_silently=True,
-        #     )
+        # After payment recording, send confirmation email
+        email_message = f"""Dear {bill.customer.user.get_full_name()},
+                        
+We have received your payment of ₱{amount} for your cable TV service bill dated {bill.bill_date.strftime("%B %d, %Y")}.
+
+Thank you for your payment.
+
+Best regards,
+Kabacan Northwest Cable TV Network Team"""
+
+        send_mail(
+            subject='Payment Confirmation',
+            message=email_message,
+            from_email=settings.EMAIL_HOST_USER,
+            recipient_list=[bill.customer.user.email],
+            fail_silently=True,
+        )
 
         messages.success(request, 'Payment recorded successfully.')
         return redirect('payment_list')
@@ -700,6 +772,7 @@ def record_payment(request, bill_id):
         'bill': bill,
         'previous_payments': previous_payments  # Add this to the context
     })
+
 
 # Report Views
 @login_required(login_url='admin_login')
@@ -743,23 +816,6 @@ def report_dashboard(request):
                 'days_overdue': days_overdue
             })
 
-    # Get disconnected accounts
-    disconnected_accounts_list = []
-    disconnected_customers = Customer.objects.select_related('user', 'plan').filter(
-        status='disconnected'
-    )
-    for customer in disconnected_customers:
-        outstanding_balance = sum(
-            bill.amount for bill in customer.bill_set.filter(status='unpaid')
-        )
-        disconnected_accounts_list.append({
-            'user': customer.user,
-            'last_plan': customer.plan,
-            'disconnection_date': customer.updated_at,
-            'disconnection_reason': 'Not specified',
-            'outstanding_balance': outstanding_balance
-        })
-
     # Calculate monthly revenue data (for the current year)
     monthly_revenue_data = []
     monthly_revenue_labels = []
@@ -783,13 +839,11 @@ def report_dashboard(request):
         # Statistics
         'paid_subscribers': len(paid_subscribers_list),
         'unpaid_subscribers': len(unpaid_subscribers_list),
-        'disconnected_accounts': len(disconnected_accounts_list),
         'monthly_revenue': {'total': current_month_revenue},
 
         # Detailed lists for tables
         'paid_subscribers_list': paid_subscribers_list,
         'unpaid_subscribers_list': unpaid_subscribers_list,
-        'disconnected_accounts_list': disconnected_accounts_list,
 
         # Chart data
         'monthly_revenue_labels': monthly_revenue_labels,
@@ -798,11 +852,13 @@ def report_dashboard(request):
 
     return render(request, 'report_dashboard.html', context)
 
+
 # Notification Views
 @login_required(login_url='admin_login')
 def notification_list(request):
     notifications = Notification.objects.select_related('customer').all()
     return render(request, 'notification_list.html', {'notifications': notifications})
+
 
 @login_required(login_url='admin_login')
 def send_notification(request, customer_id):

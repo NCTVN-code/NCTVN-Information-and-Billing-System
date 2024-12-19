@@ -171,6 +171,7 @@
     </style>
 
     {% block extra_css %}{% endblock %}
+    {% block extra_head %}{% endblock %}
 </head>
 <body>
     <!-- Top Navigation -->
@@ -187,26 +188,67 @@
             <div class="d-flex align-items-center d-lg-none">
                 <!-- Notifications -->
                 <div class="dropdown me-2">
-                    <a class="btn btn-link position-relative p-1" href="#" data-bs-toggle="dropdown">
+                    <a class="btn btn-link p-1 position-relative" href="#" data-bs-toggle="dropdown">
                         <i class="fas fa-bell fa-lg text-secondary"></i>
                         {% if unread_notifications_count %}
-                        <span class="notification-badge">{{ unread_notifications_count }}</span>
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                            {{ unread_notifications_count }}
+                            <span class="visually-hidden">unread notifications</span>
+                        </span>
                         {% endif %}
                     </a>
-                    <div class="dropdown-menu dropdown-menu-end">
-                        <h6 class="dropdown-header">Notifications</h6>
-                        {% for notification in notifications %}
-                        <a class="dropdown-item" href="{% url 'subscriber:notification_detail' notification.id %}">
-                            <small class="text-muted">{{ notification.sent_date|timesince }} ago</small>
-                            <p class="mb-0">{{ notification.title }}</p>
-                        </a>
-                        {% empty %}
-                        <div class="dropdown-item text-muted">No new notifications</div>
-                        {% endfor %}
-                        <div class="dropdown-divider"></div>
-                        <a class="dropdown-item text-center" href="{% url 'subscriber:notification_list' %}">
-                            View All
-                        </a>
+                    <div class="dropdown-menu dropdown-menu-end py-0 mt-1" style="min-width: 300px; max-height: 400px; overflow-y: auto;">
+                        <div class="p-2 border-bottom">
+                            <h6 class="mb-0">Notifications</h6>
+                            {% if unread_notifications_count %}
+                            <small class="text-muted">{{ unread_notifications_count }} unread</small>
+                            {% endif %}
+                        </div>
+                        
+                        {% if recent_notifications %}
+                            {% for notification in recent_notifications %}
+                            <a href="javascript:void(0);"
+                               onclick="markNotificationRead({{ notification.id }}, '{% url 'subscriber:notification_detail' notification.id %}')"
+                               data-notification-id="{{ notification.id }}"
+                               class="dropdown-item px-3 py-2 border-bottom"
+                                    style="{% if not notification.is_read %}background-color: #e9ecef;{% endif %}">
+                                <div class="d-flex align-items-center">
+                                    <!-- Icon based on notification type -->
+                                    {% if notification.type == 'application' %}
+                                        <i class="fas fa-file-alt text-primary me-2"></i>
+                                    {% elif notification.type == 'payment' %}
+                                        <i class="fas fa-money-bill text-success me-2"></i>
+                                    {% elif notification.type == 'overdue' %}
+                                        <i class="fas fa-exclamation-circle text-warning me-2"></i>
+                                    {% elif notification.type == 'disconnection' %}
+                                        <i class="fas fa-ban text-danger me-2"></i>
+                                    {% endif %}
+                                    
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <small class="text-muted">{{ notification.sent_date|timesince }} ago</small>
+                                            {% if not notification.is_read %}
+                                                <span class="badge bg-primary rounded-pill">New</span>
+                                            {% endif %}
+                                        </div>
+                                        <p class="mb-0 text-wrap">{{ notification.title }}</p>
+                                        <small class="text-muted text-wrap">{{ notification.message|truncatechars:50 }}</small>
+                                    </div>
+                                </div>
+                            </a>
+                            {% endfor %}
+                        {% else %}
+                            <div class="dropdown-item text-center py-3">
+                                <i class="fas fa-bell-slash text-muted mb-2"></i>
+                                <p class="mb-0 text-muted">No notifications</p>
+                            </div>
+                        {% endif %}
+                        
+                        <div class="p-2 text-center">
+                            <a href="{% url 'subscriber:notification_list' %}" class="text-decoration-none">
+                                View All Notifications
+                            </a>
+                        </div>
                     </div>
                 </div>
 
@@ -254,26 +296,67 @@
                 <ul class="navbar-nav d-none d-lg-flex align-items-center">
                     <!-- Notifications -->
                     <li class="nav-item dropdown me-2 position-relative">
-                        <a class="nav-link d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown">
+                        <a class="nav-link d-flex align-items-center position-relative" href="#" role="button" data-bs-toggle="dropdown">
                             <i class="fas fa-bell fa-lg"></i>
                             {% if unread_notifications_count %}
-                            <span class="notification-badge">{{ unread_notifications_count }}</span>
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                {{ unread_notifications_count }}
+                                <span class="visually-hidden">unread notifications</span>
+                            </span>
                             {% endif %}
                         </a>
-                        <div class="dropdown-menu dropdown-menu-end">
-                            <h6 class="dropdown-header">Notifications</h6>
-                            {% for notification in notifications %}
-                            <a class="dropdown-item" href="{% url 'subscriber:notification_detail' notification.id %}">
-                                <small class="text-muted">{{ notification.sent_date|timesince }} ago</small>
-                                <p class="mb-0">{{ notification.title }}</p>
-                            </a>
-                            {% empty %}
-                            <div class="dropdown-item text-muted">No new notifications</div>
-                            {% endfor %}
-                            <div class="dropdown-divider"></div>
-                            <a class="dropdown-item text-center" href="{% url 'subscriber:notification_list' %}">
-                                View All
-                            </a>
+                        <div class="dropdown-menu dropdown-menu-end py-0 mt-2" style="min-width: 300px; max-height: 400px; overflow-y: auto;">
+                            <div class="p-2 border-bottom">
+                                <h6 class="mb-0">Notifications</h6>
+                                {% if unread_notifications_count %}
+                                <small class="text-muted">{{ unread_notifications_count }} unread</small>
+                                {% endif %}
+                            </div>
+                            
+                            {% if recent_notifications %}
+                                {% for notification in recent_notifications %}
+                                <a href="javascript:void(0);"
+                                   onclick="markNotificationRead({{ notification.id }}, '{% url 'subscriber:notification_detail' notification.id %}')"
+                                   data-notification-id="{{ notification.id }}"
+                                   class="dropdown-item px-3 py-2 border-bottom"
+                                        style="{% if not notification.is_read %}background-color: #e9ecef;{% endif %}">
+                                    <div class="d-flex align-items-center">
+                                        <!-- Icon based on notification type -->
+                                        {% if notification.type == 'application' %}
+                                            <i class="fas fa-file-alt text-primary me-2"></i>
+                                        {% elif notification.type == 'payment' %}
+                                            <i class="fas fa-money-bill text-success me-2"></i>
+                                        {% elif notification.type == 'overdue' %}
+                                            <i class="fas fa-exclamation-circle text-warning me-2"></i>
+                                        {% elif notification.type == 'disconnection' %}
+                                            <i class="fas fa-ban text-danger me-2"></i>
+                                        {% endif %}
+                                        
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <small class="text-muted">{{ notification.sent_date|timesince }} ago</small>
+                                                {% if not notification.is_read %}
+                                                    <span class="badge bg-primary rounded-pill">New</span>
+                                                {% endif %}
+                                            </div>
+                                            <p class="mb-0 text-wrap">{{ notification.title }}</p>
+                                            <small class="text-muted text-wrap">{{ notification.message|truncatechars:50 }}</small>
+                                        </div>
+                                    </div>
+                                </a>
+                                {% endfor %}
+                            {% else %}
+                                <div class="dropdown-item text-center py-3">
+                                    <i class="fas fa-bell-slash text-muted mb-2"></i>
+                                    <p class="mb-0 text-muted">No notifications</p>
+                                </div>
+                            {% endif %}
+                            
+                            <div class="p-2 text-center">
+                                <a href="{% url 'subscriber:notification_list' %}" class="text-decoration-none">
+                                    View All Notifications
+                                </a>
+                            </div>
                         </div>
                     </li>
                     
@@ -389,5 +472,51 @@
     </script>
 
     {% block extra_js %}{% endblock %}
+    <script>
+    function markNotificationRead(notificationId, detailUrl) {
+        // Get CSRF token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        const csrftoken = getCookie('csrftoken');
+
+        // Mark notification as read
+        $.ajax({
+            url: "{% url 'subscriber:mark_notification_read' 0 %}".replace('0', notificationId),
+            type: 'POST',
+            headers: {'X-CSRFToken': csrftoken},
+            success: function(response) {
+                if (response.status === 'success') {
+                    // Update UI
+                    const notificationItem = $(`[data-notification-id="${notificationId}"]`);
+                    notificationItem.css('background-color', '');
+                    notificationItem.find('.badge.bg-primary').remove();
+                    
+                    // Update notification count
+                    let count = parseInt($('.badge.rounded-pill.bg-danger').text());
+                    if (count > 1) {
+                        $('.badge.rounded-pill.bg-danger').text(count - 1);
+                    } else {
+                        $('.badge.rounded-pill.bg-danger').remove();
+                    }
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error marking notification as read:', error);
+            }
+        });
+    }
+    </script>
 </body>
 </html> 

@@ -139,7 +139,7 @@
                             <td>₱{{ payment.amount|floatformat:2 }}</td>
                             <td>
                                 <span class="badge {% if payment.payment_method == 'cash' %}bg-success
-                                    {% elif payment.payment_method == 'card' %}bg-info
+                                    {% elif payment.payment_method == 'gcash' %}bg-info
                                     {% else %}bg-primary{% endif %}">
                                     {{ payment.get_payment_method_display }}
                                 </span>
@@ -180,8 +180,8 @@
                         <select class="form-select" name="payment_method">
                             <option value="">All</option>
                             <option value="cash">Cash</option>
-                            <option value="card">Card</option>
-                            <option value="bank_transfer">Bank Transfer</option>
+                            <option value="gcash">GCash</option>
+                            <option value="stripe">Stripe</option>
                         </select>
                     </div>
                     <div class="mb-3">
@@ -263,7 +263,7 @@ $(document).ready(function() {
     // Payment Methods Chart
     var pieCtx = document.getElementById('paymentMethodsChart').getContext('2d');
     var paymentMethodsData = {{ payment_methods_data|safe }};
-    var paymentMethods = ['Cash', 'Card', 'Bank Transfer'];
+    var paymentMethods = ['Cash', 'GCash', 'Stripe'];
     
     // Filter out payment methods with zero values
     var filteredData = [];
