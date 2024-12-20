@@ -406,10 +406,16 @@ def make_payment(request, bill_id):
                     'session_id': checkout_session.id
                 })
 
-            except Exception as e:
-                return JsonResponse({
-                    'error': str(e)
-                }, status=400)
+            except stripe.error.CardError as e:
+                messages.error(request, f"Card error: {e.error.message}")
+            except stripe.error.InvalidRequestError as e:
+                messages.error(request, "Invalid parameters")
+            except stripe.error.AuthenticationError:
+                messages.error(request, "Authentication failed")
+            except stripe.error.APIConnectionError:
+                messages.error(request, "Network communication failed")
+            except stripe.error.StripeError:
+                messages.error(request, "Payment failed")
 
         # GCash payment
         elif payment_method == 'gcash':

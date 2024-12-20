@@ -22,7 +22,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-neeo2*o^qk!6$a8%22no3qdg68i^3v20+h4-2eu9!b2ez!5xfm'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['*']
 
@@ -75,26 +75,26 @@ WSGI_APPLICATION = 'cable_info_billing.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
-
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'neondb',
-        'USER': 'neondb_owner',
-        'PASSWORD': 'Z9oL1WmYCVsw',
-        'HOST': 'ep-square-block-a15pze1q-pooler.ap-southeast-1.aws.neon.tech',
-        'PORT': '5432',
-        'OPTIONS': {
-            'sslmode': 'require',
-        }
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'neondb',
+#         'USER': 'neondb_owner',
+#         'PASSWORD': 'Z9oL1WmYCVsw',
+#         'HOST': 'ep-square-block-a15pze1q-pooler.ap-southeast-1.aws.neon.tech',
+#         'PORT': '5432',
+#         'OPTIONS': {
+#             'sslmode': 'require',
+#         }
+#     }
+# }
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -158,9 +158,16 @@ Q_CLUSTER = {
     'orm': 'default'
 }
 
-STRIPE_PUBLISHABLE_KEY = 'pk_test_51QXEduGPm4nFp8xA8sF2HPxPfEaDQuyMlXK1MMtirK5iv4LVdNoDUK5r1F4CtLx9Q49xiG4Au5dprdi2yRhozf6900NzZE5Wxj'
-STRIPE_SECRET_KEY = 'sk_test_51QXEduGPm4nFp8xAiqGH2wsM9bFRJ3JnL6lvOBxgleCw4rI8TGnwErrcVOxdoczdTgSbWgZiXuRmy3RYUYb3qWah0060ACM0qL'
-STRIPE_WEBHOOK_SECRET = 'whsec_7256e175c9df82a55ea958213f1e5eb3d22866724846a35b832de28262969311'
+# For development/testing
+if DEBUG:
+    STRIPE_PUBLISHABLE_KEY = 'pk_test_51QXEduGPm4nFp8xA8sF2HPxPfEaDQuyMlXK1MMtirK5iv4LVdNoDUK5r1F4CtLx9Q49xiG4Au5dprdi2yRhozf6900NzZE5Wxj'
+    STRIPE_SECRET_KEY = 'sk_test_51QXEduGPm4nFp8xAiqGH2wsM9bFRJ3JnL6lvOBxgleCw4rI8TGnwErrcVOxdoczdTgSbWgZiXuRmy3RYUYb3qWah0060ACM0qL'
+    STRIPE_WEBHOOK_SECRET = 'whsec_7256e175c9df82a55ea958213f1e5eb3d22866724846a35b832de28262969311'
+else:
+    # For production
+    STRIPE_PUBLISHABLE_KEY = 'pk_test_51QXEduGPm4nFp8xA8sF2HPxPfEaDQuyMlXK1MMtirK5iv4LVdNoDUK5r1F4CtLx9Q49xiG4Au5dprdi2yRhozf6900NzZE5Wxj'
+    STRIPE_SECRET_KEY = 'sk_test_51QXEduGPm4nFp8xAiqGH2wsM9bFRJ3JnL6lvOBxgleCw4rI8TGnwErrcVOxdoczdTgSbWgZiXuRmy3RYUYb3qWah0060ACM0qL'
+    STRIPE_WEBHOOK_SECRET = 'whsec_364Pn7130DhAuEpCxO9fzdeoDLZ47Zni'
 
 # Add OCR Space API Key
 OCR_SPACE_API_KEY = 'K83346461388957'
