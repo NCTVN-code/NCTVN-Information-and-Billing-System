@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -22,13 +23,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-neeo2*o^qk!6$a8%22no3qdg68i^3v20+h4-2eu9!b2ez!5xfm'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
+
+# Check if running on Vercel
+IS_VERCEL = os.environ.get('VERCEL', False)
 
 ALLOWED_HOSTS = ['*']
 
-# Application definition
-
-INSTALLED_APPS = [
+# Base installed apps
+BASE_INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -37,9 +40,28 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'management',
     'subscriber',
-    'django_q',
     'stripe',
 ]
+
+# Add django_q only when not on Vercel
+if not IS_VERCEL:
+    INSTALLED_APPS = BASE_INSTALLED_APPS + ['django_q']
+    
+    # Django Q configurations (only for development)
+    Q_CLUSTER = {
+        'name': 'cable_info_billing',
+        'workers': 4,
+        'recycle': 500,
+        'timeout': 60,
+        'compress': True,
+        'save_limit': 250,
+        'queue_limit': 500,
+        'cpu_affinity': 1,
+        'label': 'Django Q',
+        'orm': 'default'
+    }
+else:
+    INSTALLED_APPS = BASE_INSTALLED_APPS
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -75,26 +97,26 @@ WSGI_APPLICATION = 'cable_info_billing.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
-
 # DATABASES = {
 #     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'neondb',
-#         'USER': 'neondb_owner',
-#         'PASSWORD': 'Z9oL1WmYCVsw',
-#         'HOST': 'ep-square-block-a15pze1q-pooler.ap-southeast-1.aws.neon.tech',
-#         'PORT': '5432',
-#         'OPTIONS': {
-#             'sslmode': 'require',
-#         }
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
 #     }
 # }
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'neondb',
+        'USER': 'neondb_owner',
+        'PASSWORD': 'Z9oL1WmYCVsw',
+        'HOST': 'ep-square-block-a15pze1q-pooler.ap-southeast-1.aws.neon.tech',
+        'PORT': '5432',
+        'OPTIONS': {
+            'sslmode': 'require',
+        }
+    }
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -144,30 +166,28 @@ EMAIL_HOST_PASSWORD = 'qfsx kodv feyt qiqv'
 DEFAULT_FROM_EMAIL = 'Kabacan Northwest Cable TV <kabacannorthwestcabletvnetwork@gmail.com>'
 SERVER_EMAIL = 'kabacannorthwestcabletvnetwork@gmail.com'
 
-# Django Q configurations
-Q_CLUSTER = {
-    'name': 'cable_info_billing',
-    'workers': 4,
-    'recycle': 500,
-    'timeout': 60,
-    'compress': True,
-    'save_limit': 250,
-    'queue_limit': 500,
-    'cpu_affinity': 1,
-    'label': 'Django Q',
-    'orm': 'default'
-}
-
-# For development/testing
-if DEBUG:
-    STRIPE_PUBLISHABLE_KEY = 'pk_test_51QXEduGPm4nFp8xA8sF2HPxPfEaDQuyMlXK1MMtirK5iv4LVdNoDUK5r1F4CtLx9Q49xiG4Au5dprdi2yRhozf6900NzZE5Wxj'
-    STRIPE_SECRET_KEY = 'sk_test_51QXEduGPm4nFp8xAiqGH2wsM9bFRJ3JnL6lvOBxgleCw4rI8TGnwErrcVOxdoczdTgSbWgZiXuRmy3RYUYb3qWah0060ACM0qL'
-    STRIPE_WEBHOOK_SECRET = 'whsec_7256e175c9df82a55ea958213f1e5eb3d22866724846a35b832de28262969311'
-else:
-    # For production
-    STRIPE_PUBLISHABLE_KEY = 'pk_test_51QXEduGPm4nFp8xA8sF2HPxPfEaDQuyMlXK1MMtirK5iv4LVdNoDUK5r1F4CtLx9Q49xiG4Au5dprdi2yRhozf6900NzZE5Wxj'
-    STRIPE_SECRET_KEY = 'sk_test_51QXEduGPm4nFp8xAiqGH2wsM9bFRJ3JnL6lvOBxgleCw4rI8TGnwErrcVOxdoczdTgSbWgZiXuRmy3RYUYb3qWah0060ACM0qL'
-    STRIPE_WEBHOOK_SECRET = 'whsec_364Pn7130DhAuEpCxO9fzdeoDLZ47Zni'
-
+# Get Stripe keys from environment variables with development defaults
+STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', 
+    'pk_test_51QXEduGPm4nFp8xA8sF2HPxPfEaDQuyMlXK1MMtirK5iv4LVdNoDUK5r1F4CtLx9Q49xiG4Au5dprdi2yRhozf6900NzZE5Wxj')
+STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY', 
+    'sk_test_51QXEduGPm4nFp8xAiqGH2wsM9bFRJ3JnL6lvOBxgleCw4rI8TGnwErrcVOxdoczdTgSbWgZiXuRmy3RYUYb3qWah0060ACM0qL')
+STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', 
+    'whsec_7256e175c9df82a55ea958213f1e5eb3d22866724846a35b832de28262969311')
+    
 # Add OCR Space API Key
 OCR_SPACE_API_KEY = 'K83346461388957'
+
+# Add Vercel-specific settings
+if IS_VERCEL:
+    STATIC_ROOT = BASE_DIR / 'staticfiles'
+    STATICFILES_DIRS = [
+        BASE_DIR / 'static',
+    ]
+    
+    # Security settings for production
+    if not DEBUG:
+        SECURE_SSL_REDIRECT = False  # Vercel handles SSL
+        SESSION_COOKIE_SECURE = True
+        CSRF_COOKIE_SECURE = True
+        SECURE_BROWSER_XSS_FILTER = True
+        SECURE_CONTENT_TYPE_NOSNIFF = True
