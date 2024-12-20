@@ -12,13 +12,12 @@ class ManagementConfig(AppConfig):
             # Delete existing schedule
             Schedule.objects.filter(name='check_bills_daily').delete()
 
-            # Create new schedule
+            # Create new schedule to run at midnight daily
             Schedule.objects.create(
                 name='check_bills_daily',
                 func='management.tasks.check_bills',
-                schedule_type=Schedule.MINUTES,
-                minutes=1,
-                next_run=timezone.now(),
+                schedule_type=Schedule.DAILY,
+                next_run=timezone.now().replace(hour=0, minute=0, second=0, microsecond=0),
                 repeats=-1
             )
         except Exception as e:
