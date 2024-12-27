@@ -434,8 +434,8 @@ $(document).ready(function() {
         var billId = button.data('bill-id');
         var modal = $(this);
 
-        // Set form action
-        modal.find('#deleteBillForm').attr('action', '/management/bills/' + billId + '/delete/');
+        // Set form action with the correct URL pattern
+        modal.find('#deleteBillForm').attr('action', "{% url 'delete_bill' bill_id=0 %}".replace('0', billId));
     });
 
     // Handle customer selection in Generate Bill Modal

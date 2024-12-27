@@ -6,7 +6,7 @@ from django.contrib.auth import authenticate, login, logout, update_session_auth
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.core.mail import send_mail
-from django.db import transaction  # Add this import at the top
+from django.db import transaction, models
 from django.db.models import Sum, Count
 from django.db.models.functions import TruncMonth
 from django.shortcuts import render, redirect, get_object_or_404
@@ -117,40 +117,56 @@ def edit_profile(request):
 
 
 def get_recent_activities():
-    # Get last 10 activities
+    # Get all activities in parallel with minimal fields
+    recent_applications = Customer.objects.select_related('user').filter(
+        status='pending'
+    ).order_by('-application_date')[:5].values(
+        'application_date',
+        'user__first_name',
+        'user__last_name'
+    )
+
+    recent_payments = Payment.objects.select_related(
+        'bill__customer__user'
+    ).order_by('-payment_date')[:5].values(
+        'payment_date',
+        'bill__customer__user__first_name',
+        'bill__customer__user__last_name'
+    )
+
+    recent_notifications = Notification.objects.select_related(
+        'customer__user'
+    ).order_by('-sent_date')[:5].values(
+        'sent_date',
+        'customer__user__first_name',
+        'customer__user__last_name'
+    )
+
+    # Combine activities efficiently
     activities = []
 
-    # Add recent customer applications
-    recent_applications = Customer.objects.filter(
-        status='pending'
-    ).order_by('-application_date')[:5]
+    # Add applications
     for app in recent_applications:
         activities.append({
             'type': 'application',
-            'date': app.application_date,
-            'message': f'New application from {app.user.get_full_name()}'
+            'date': app['application_date'],
+            'message': f'New application from {app["user__first_name"]} {app["user__last_name"]}'
         })
 
-    # Add recent payments
-    recent_payments = Payment.objects.select_related(
-        'bill', 'bill__customer'
-    ).order_by('-payment_date')[:5]
+    # Add payments
     for payment in recent_payments:
         activities.append({
             'type': 'payment',
-            'date': payment.payment_date,
-            'message': f'Payment received from {payment.bill.customer.user.get_full_name()}'
+            'date': payment['payment_date'],
+            'message': f'Payment received from {payment["bill__customer__user__first_name"]} {payment["bill__customer__user__last_name"]}'
         })
 
-    # Add recent notifications
-    recent_notifications = Notification.objects.select_related(
-        'customer'
-    ).order_by('-sent_date')[:5]
+    # Add notifications
     for notif in recent_notifications:
         activities.append({
             'type': 'notification',
-            'date': notif.sent_date,
-            'message': f'Notification sent to {notif.customer.user.get_full_name()}'
+            'date': notif['sent_date'],
+            'message': f'Notification sent to {notif["customer__user__first_name"]} {notif["customer__user__last_name"]}'
         })
 
     # Sort all activities by date
@@ -160,22 +176,27 @@ def get_recent_activities():
 
 @login_required(login_url='admin_login')
 def admin_dashboard(request):
-    # Existing statistics
-    total_customers = Customer.objects.count()
-    active_customers = Customer.objects.filter(status='approved').count()
-    pending_applications = Customer.objects.filter(status='pending').count()
+    # Get customer statistics in a single query
+    customer_stats = Customer.objects.aggregate(
+        total_customers=Count('id'),
+        active_customers=Count('id', filter=models.Q(status='approved')),
+        pending_applications=Count('id', filter=models.Q(status='pending'))
+    )
+
+    # Get total revenue in a single query
     total_revenue = Payment.objects.aggregate(total=Sum('amount'))['total'] or 0
 
-    # Get recent data
-    recent_applications = Customer.objects.filter(
+    # Get recent applications with user data in a single query
+    recent_applications = Customer.objects.select_related('user').filter(
         status='pending'
     ).order_by('-application_date')[:5]
 
+    # Get recent payments with all related data in a single query
     recent_payments = Payment.objects.select_related(
-        'bill', 'bill__customer'
+        'bill__customer__user'
     ).order_by('-payment_date')[:5]
 
-    # Revenue trend data (last 6 months)
+    # Revenue trend data (last 6 months) in a single query
     today = timezone.now()
     six_months_ago = today - timedelta(days=180)
     monthly_revenue = (
@@ -187,10 +208,7 @@ def admin_dashboard(request):
         .order_by('month')
     )
 
-    revenue_labels = [entry['month'].strftime('%B %Y') for entry in monthly_revenue]
-    revenue_data = [float(entry['total']) for entry in monthly_revenue]
-
-    # Customer distribution by plan
+    # Customer plan distribution in a single query
     plan_distribution = (
         Customer.objects
         .filter(status='approved')
@@ -199,10 +217,7 @@ def admin_dashboard(request):
         .order_by('-count')
     )
 
-    plan_labels = [entry['plan__name'] for entry in plan_distribution]
-    plan_data = [entry['count'] for entry in plan_distribution]
-
-    # Payment method distribution
+    # Payment method distribution in a single query
     payment_methods = (
         Payment.objects
         .values('payment_method')
@@ -210,14 +225,21 @@ def admin_dashboard(request):
         .order_by('-count')
     )
 
+    # Process the data for charts
+    revenue_labels = [entry['month'].strftime('%B %Y') for entry in monthly_revenue]
+    revenue_data = [float(entry['total']) for entry in monthly_revenue]
+
+    plan_labels = [entry['plan__name'] for entry in plan_distribution]
+    plan_data = [entry['count'] for entry in plan_distribution]
+
     payment_method_labels = [entry['payment_method'].replace('_', ' ').title()
-                             for entry in payment_methods]
+                           for entry in payment_methods]
     payment_method_data = [entry['count'] for entry in payment_methods]
 
     context = {
-        'total_customers': total_customers,
-        'active_customers': active_customers,
-        'pending_applications': pending_applications,
+        'total_customers': customer_stats['total_customers'],
+        'active_customers': customer_stats['active_customers'],
+        'pending_applications': customer_stats['pending_applications'],
         'total_revenue': total_revenue,
         'recent_applications': recent_applications,
         'recent_payments': recent_payments,
@@ -241,14 +263,32 @@ def customer_list(request):
 
 @login_required(login_url='admin_login')
 def customer_detail(request, customer_id):
-    customer = get_object_or_404(Customer, id=customer_id)
-    bills = Bill.objects.filter(customer=customer)
-    payments = Payment.objects.filter(bill__customer=customer)
-    return render(request, 'customer_detail.html', {
+    # Get customer with all related data in a single query
+    customer = get_object_or_404(
+        Customer.objects.select_related('user', 'plan'),
+        id=customer_id
+    )
+
+    # Get bills and payments in a single query with all related data
+    bills = Bill.objects.select_related('customer').prefetch_related(
+        'payment_set'
+    ).filter(customer=customer).order_by('-bill_date')
+
+    # Get all payments for this customer's bills in a single query
+    payments = Payment.objects.select_related('bill').filter(
+        bill__customer=customer
+    ).order_by('-payment_date')
+
+    context = {
         'customer': customer,
         'bills': bills,
-        'payments': payments
-    })
+        'payments': payments,
+        'total_bills': bills.count(),
+        'total_paid': payments.aggregate(total=Sum('amount'))['total'] or 0,
+        'total_unpaid': bills.filter(status='unpaid').aggregate(
+            total=Sum('amount'))['total'] or 0
+    }
+    return render(request, 'customer_detail.html', context)
 
 
 @login_required(login_url='admin_login')
@@ -533,33 +573,53 @@ def plan_list(request):
 # Billing Views
 @login_required(login_url='admin_login')
 def bill_list(request):
-    # Modify the bills queryset to include customer and plan information
-    bills = Bill.objects.select_related(
-        'customer',
+    # Get approved customers in a single query
+    customers = Customer.objects.filter(
+        status='approved'
+    ).select_related('user')
+
+    # Start building the bills query
+    bills_query = Bill.objects.select_related(
         'customer__user',
         'customer__plan'
-    ).all()
-    customers = Customer.objects.filter(status='approved').select_related('user')
+    )
 
     # Get filter parameters from URL
     status = request.GET.get('status')
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
 
-    # Apply filters
+    # Build filter conditions
+    filters = {}
     if status:
-        bills = bills.filter(status=status)
+        filters['status'] = status
     if start_date:
-        bills = bills.filter(bill_date__gte=start_date)
+        filters['bill_date__gte'] = start_date
     if end_date:
-        bills = bills.filter(bill_date__lte=end_date)
+        filters['bill_date__lte'] = end_date
+
+    # Apply filters in a single query
+    bills = bills_query.filter(**filters)
+
+    # Get statistics in a single query
+    bill_stats = bills.aggregate(
+        paid_bills_count=Count('id', filter=models.Q(status='paid')),
+        unpaid_bills_count=Count('id', filter=models.Q(status='unpaid')),
+        overdue_bills_count=Count('id', filter=models.Q(status='overdue')),
+        total_amount=Sum('amount'),
+        total_paid=Sum('amount', filter=models.Q(status='paid')),
+        total_unpaid=Sum('amount', filter=models.Q(status='unpaid'))
+    )
 
     context = {
-        'bills': bills,
+        'bills': bills.order_by('-bill_date'),
         'customers': customers,
-        'paid_bills_count': bills.filter(status='paid').count(),
-        'unpaid_bills_count': bills.filter(status='unpaid').count(),
-        'overdue_bills': bills.filter(status='overdue').count(),
+        'paid_bills_count': bill_stats['paid_bills_count'],
+        'unpaid_bills_count': bill_stats['unpaid_bills_count'],
+        'overdue_bills': bill_stats['overdue_bills_count'],
+        'total_amount': bill_stats['total_amount'] or 0,
+        'total_paid': bill_stats['total_paid'] or 0,
+        'total_unpaid': bill_stats['total_unpaid'] or 0,
         'current_filters': {
             'status': status,
             'start_date': start_date,
@@ -668,43 +728,51 @@ def delete_bill(request, bill_id):
 # Payment Views
 @login_required(login_url='admin_login')
 def payment_list(request):
-    # Get all payments with related data
-    payments = Payment.objects.select_related('bill', 'bill__customer').all()
+    # Get all payments with related data in a single query
+    payments = Payment.objects.select_related(
+        'bill__customer__user',
+        'bill__customer__plan'
+    )
 
-    # Calculate statistics
-    total_payments = payments.count()
-    total_revenue = payments.aggregate(total=Sum('amount'))['total'] or 0
-    todays_payments = payments.filter(payment_date__date=timezone.now().date()).count()
+    # Get all statistics in a single query
+    today = timezone.now().date()
+    payment_stats = payments.aggregate(
+        total_payments=Count('id'),
+        total_revenue=Sum('amount'),
+        todays_payments=Count('id', filter=models.Q(payment_date__date=today))
+    )
+
+    # Calculate average payment
+    total_payments = payment_stats['total_payments']
+    total_revenue = payment_stats['total_revenue'] or 0
     average_payment = total_revenue / total_payments if total_payments > 0 else 0
 
-    # Get payment history data for chart (last 30 days)
+    # Get payment history data for chart (last 30 days) in a single query
     thirty_days_ago = timezone.now() - timedelta(days=30)
     payment_history = (
-        Payment.objects
-        .filter(payment_date__gte=thirty_days_ago)
+        payments.filter(payment_date__gte=thirty_days_ago)
         .values('payment_date__date')
         .annotate(daily_total=Sum('amount'))
         .order_by('payment_date__date')
     )
 
-    payment_dates = [p['payment_date__date'].strftime('%Y-%m-%d') for p in payment_history]
-    payment_amounts = [float(p['daily_total']) for p in payment_history]
-
-    # Get payment methods distribution
+    # Get payment methods distribution in a single query
     payment_methods = (
-        Payment.objects
-        .values('payment_method')
+        payments.values('payment_method')
         .annotate(count=Count('id'))
         .order_by('payment_method')
     )
 
+    # Process chart data
+    payment_dates = [p['payment_date__date'].strftime('%Y-%m-%d') for p in payment_history]
+    payment_amounts = [float(p['daily_total']) for p in payment_history]
     payment_methods_data = [p['count'] for p in payment_methods]
 
     context = {
-        'payments': payments,
+        'payments': payments.order_by('-payment_date'),
         'total_payments': total_payments,
         'total_revenue': total_revenue,
-        'todays_payments': todays_payments,
+        'todays_payments': payment_stats['todays_payments'],
         'average_payment': average_payment,
         'payment_dates': payment_dates,
         'payment_amounts': payment_amounts,
@@ -781,58 +849,55 @@ def report_dashboard(request):
     current_year = today.year
     current_month = today.month
 
-    # Optimize customer query with select_related and prefetch_related
+    # Get all approved customers with their plans in a single query
     customers = Customer.objects.select_related(
         'user', 'plan'
     ).filter(status='approved')
 
-    # Get all bills for the current month in a single query
+    # Get all bills for current month with payments in a single query
     current_month_bills = Bill.objects.select_related(
-        'customer', 'customer__user', 'customer__plan'
+        'customer__user', 'customer__plan'
+    ).prefetch_related(
+        'payment_set'
     ).filter(
         customer__status='approved',
         bill_date__year=current_year,
         bill_date__month=current_month
-    ).prefetch_related('payment_set')
+    ).annotate(
+        payment_status=models.Case(
+            models.When(status='paid', then=True),
+            default=False,
+            output_field=models.BooleanField()
+        ),
+        latest_payment_date=models.Max('payment_set__payment_date'),
+        latest_payment_amount=models.Max('payment_set__amount')
+    )
 
-    # Get paid and unpaid bills efficiently
-    paid_bills = {
-        bill.customer_id: bill 
-        for bill in current_month_bills.filter(status='paid')
-    }
-    unpaid_bills = {
-        bill.customer_id: bill 
-        for bill in current_month_bills.filter(status='unpaid')
-    }
-
-    # Process paid subscribers
+    # Process subscribers efficiently
     paid_subscribers_list = []
-    for customer in customers:
-        if customer.id in paid_bills:
-            bill = paid_bills[customer.id]
-            latest_payment = bill.payment_set.first()
-            if latest_payment:
-                paid_subscribers_list.append({
-                    'user': customer.user,
-                    'plan': customer.plan,
-                    'last_payment_date': latest_payment.payment_date,
-                    'last_payment_amount': latest_payment.amount
-                })
-
-    # Process unpaid subscribers
     unpaid_subscribers_list = []
-    for customer in customers:
-        if customer.id in unpaid_bills:
-            bill = unpaid_bills[customer.id]
+
+    for bill in current_month_bills:
+        subscriber_data = {
+            'user': bill.customer.user,
+            'plan': bill.customer.plan,
+        }
+
+        if bill.payment_status:
+            paid_subscribers_list.append({
+                **subscriber_data,
+                'last_payment_date': bill.latest_payment_date,
+                'last_payment_amount': bill.latest_payment_amount
+            })
+        else:
             days_overdue = (today - bill.due_date).days if today > bill.due_date else 0
             unpaid_subscribers_list.append({
-                'user': customer.user,
-                'plan': customer.plan,
+                **subscriber_data,
                 'bill': bill,
                 'days_overdue': days_overdue
             })
 
-    # Calculate monthly revenue data efficiently using a single query
+    # Get monthly revenue data efficiently using a single query
     monthly_revenues = Payment.objects.filter(
         payment_date__year=current_year
     ).values(

@@ -295,10 +295,23 @@ function hideLoading() {
 $(document).ready(function() {
     // Handle form submission for Stripe payments
     $('#payment-form').on('submit', async function(e) {
+        e.preventDefault();
         const paymentMethod = $('#payment_method').val();
         
+        // Form validation
+        if (!this.checkValidity()) {
+            e.stopPropagation();
+            $(this).addClass('was-validated');
+            return;
+        }
+
+        // Check terms agreement
+        if (!$('#terms').is(':checked')) {
+            $('#terms').addClass('is-invalid');
+            return;
+        }
+        
         if (paymentMethod === 'stripe') {
-            e.preventDefault();
             showLoading();
             
             try {
@@ -331,63 +344,51 @@ $(document).ready(function() {
                 hideLoading();
                 alert('Payment failed: ' + error.message);
             }
-            return false;
-        }
-    });
+        } else if (paymentMethod === 'gcash') {
+            // Validate GCash specific fields
+            if (!$('#receipt').val()) {
+                $('#receipt').addClass('is-invalid');
+                return;
+            }
 
-    // Show/hide payment methods
-    $('#payment_method').change(function() {
-        const method = $(this).val();
-        
-        // Hide all payment-specific elements
-        $('#gcash-upload').addClass('d-none');
-        
-        if (method === 'gcash') {
-            $('#gcash-upload').removeClass('d-none');
-        }
-    });
-
-    // Handle form submission
-    const form = document.getElementById('payment-form');
-    form.addEventListener('submit', async (event) => {
-        event.preventDefault();
-
-        // Check form validity first
-        if (!form.checkValidity()) {
-            event.stopPropagation();
-            form.classList.add('was-validated');
-            return;
-        }
-
-        // Check if all fields are confirmed for GCash payments
-        const paymentMethod = $('#payment_method').val();
-        if (paymentMethod === 'gcash') {
+            // Check if all fields are confirmed
             const confirmedAmount = $('#confirmed-amount').val();
             const confirmedReference = $('#confirmed-reference').val();
             const confirmedDate = $('#confirmed-date').val();
 
+            let isValid = true;
+
             if (!confirmedAmount) {
                 $('#amount-not-confirmed').removeClass('d-none');
-                return;
+                isValid = false;
             }
             if (!confirmedReference) {
                 $('#reference-not-confirmed').removeClass('d-none');
-                return;
+                isValid = false;
             }
             if (!confirmedDate) {
                 $('#date-not-confirmed').removeClass('d-none');
+                isValid = false;
+            }
+
+            if (!isValid) {
                 return;
             }
-        }
 
-        // If all validations pass, submit the form
-        form.submit();
+            // Submit the form for GCash payment
+            showLoading();
+            this.submit();
+        }
     });
 
     // Handle file input change for preview and OCR
     $('#receipt').change(function(e) {
         const file = e.target.files[0];
         if (file) {
+            // Reset validation states
+            $(this).removeClass('is-invalid');
+            $('#amount-not-confirmed, #reference-not-confirmed, #date-not-confirmed').addClass('d-none');
+            
             const reader = new FileReader();
             reader.onload = function(e) {
                 $('#preview-image').attr('src', e.target.result);
@@ -413,6 +414,10 @@ $(document).ready(function() {
                         $('#confirmed-amount').val('');
                         $('#confirmed-reference').val('');
                         $('#confirmed-date').val('');
+
+                        // Reset confirmation buttons
+                        $('.input-group button').removeClass('btn-success').addClass('btn-outline-secondary')
+                            .html('<i class="fas fa-check"></i>');
 
                         // Update detected values
                         if (data.data.total_amount) {
@@ -453,6 +458,22 @@ $(document).ready(function() {
         } else {
             $('#receipt-preview').addClass('d-none');
             $('#ocr-results').addClass('d-none');
+        }
+    });
+
+    // Add validation for payment method selection
+    $('#payment_method').change(function() {
+        const method = $(this).val();
+        
+        // Reset validation states
+        $('.is-invalid').removeClass('is-invalid');
+        $('.d-none').addClass('d-none');
+        
+        // Hide all payment-specific elements
+        $('#gcash-upload').addClass('d-none');
+        
+        if (method === 'gcash') {
+            $('#gcash-upload').removeClass('d-none');
         }
     });
 });

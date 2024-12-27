@@ -152,7 +152,7 @@ def dashboard(request):
 
     context = {
         'customer': customer,
-        'current_plan': customer.plan,
+        'current_plan': customer.plan,  # This causes an additional query
         'recent_bills': Bill.objects.filter(customer=customer).order_by('-bill_date')[:5],
         'recent_payments': Payment.objects.filter(bill__customer=customer).order_by('-payment_date')[:5],
         'notifications': Notification.objects.filter(customer=customer, is_read=False)[:5],
@@ -164,10 +164,13 @@ def dashboard(request):
 
 @login_required(login_url='subscriber:login')
 def plan_list(request):
+    # Get all plans in one query
     plans = CablePlan.objects.all().order_by('price')
+    
     try:
-        customer = Customer.objects.get(user=request.user)
-        current_plan = customer.plan
+        # Get customer with plan in one query
+        customer = Customer.objects.select_related('plan').get(user=request.user)
+        current_plan = customer.plan  # No additional query needed
     except Customer.DoesNotExist:
         current_plan = None
 
@@ -284,61 +287,68 @@ def my_plan(request):
 
 @login_required(login_url='subscriber:login')
 def billing_list(request):
-    customer = get_object_or_404(Customer, user=request.user)
-    bills = Bill.objects.filter(customer=customer).order_by('-bill_date')
-
-    # Calculate statistics
-    total_bills = bills.count()
-    paid_bills = bills.filter(status='paid').count()
-    unpaid_bills = bills.filter(status='unpaid').count()
-    overdue_bills = bills.filter(status='overdue').count()
-
-    # Calculate total amounts
-    total_due = bills.filter(status='unpaid').aggregate(
-        total=models.Sum('amount'))['total'] or Decimal('0.00')
+    customer = get_object_or_404(Customer.objects.select_related('user'), user=request.user)
+    
+    # Get all bills with their status counts and total due in a single query
+    bills = Bill.objects.filter(customer=customer)
+    bills_with_stats = bills.aggregate(
+        total_bills=models.Count('id'),
+        paid_bills=models.Count('id', filter=models.Q(status='paid')),
+        unpaid_bills=models.Count('id', filter=models.Q(status='unpaid')),
+        overdue_bills=models.Count('id', filter=models.Q(status='overdue')),
+        total_due=models.Sum('amount', filter=models.Q(status='unpaid'))
+    )
 
     context = {
-        'bills': bills,
-        'total_bills': total_bills,
-        'paid_bills': paid_bills,
-        'unpaid_bills': unpaid_bills,
-        'overdue_bills': overdue_bills,
-        'total_due': total_due,
+        'bills': bills.order_by('-bill_date'),
+        'total_bills': bills_with_stats['total_bills'],
+        'paid_bills': bills_with_stats['paid_bills'],
+        'unpaid_bills': bills_with_stats['unpaid_bills'],
+        'overdue_bills': bills_with_stats['overdue_bills'],
+        'total_due': bills_with_stats['total_due'] or Decimal('0.00'),
     }
     return render(request, 'subscriber/billing_list.html', context)
 
 
 @login_required(login_url='subscriber:login')
 def billing_detail(request, bill_id):
-    customer = get_object_or_404(Customer, user=request.user)
-    bill = get_object_or_404(Bill, id=bill_id, customer=customer)
+    customer = get_object_or_404(Customer.objects.select_related('user'), user=request.user)
+    bill = get_object_or_404(
+        Bill.objects.select_related('customer'),
+        id=bill_id,
+        customer=customer
+    )
     return render(request, 'subscriber/billing_detail.html', {'bill': bill})
 
 
 @login_required(login_url='subscriber:login')
 def payment_list(request):
-    customer = get_object_or_404(Customer, user=request.user)
-    payments = Payment.objects.filter(bill__customer=customer).order_by('-payment_date')
+    customer = get_object_or_404(Customer.objects.select_related('user'), user=request.user)
+    
+    # Get all payments with related bills in a single query
+    payments = Payment.objects.select_related('bill').filter(
+        bill__customer=customer
+    ).order_by('-payment_date')
 
-    # Calculate payment statistics
-    total_payments = payments.count()
-    total_amount_paid = payments.aggregate(
-        total=models.Sum('amount'))['total'] or Decimal('0.00')
+    # Get payment statistics in a single query
+    payment_stats = payments.aggregate(
+        total_payments=models.Count('id'),
+        total_amount_paid=models.Sum('amount')
+    )
 
-    # Get last payment
-    last_payment = payments.first()
-
-    # Calculate outstanding balance
+    # Get outstanding balance in a single query
     outstanding_balance = Bill.objects.filter(
         customer=customer,
         status='unpaid'
-    ).aggregate(total=models.Sum('amount'))['total'] or Decimal('0.00')
+    ).aggregate(
+        total=models.Sum('amount')
+    )['total'] or Decimal('0.00')
 
     context = {
         'payments': payments,
-        'total_payments': total_payments,
-        'total_amount_paid': total_amount_paid,
-        'last_payment': last_payment,
+        'total_payments': payment_stats['total_payments'],
+        'total_amount_paid': payment_stats['total_amount_paid'] or Decimal('0.00'),
+        'last_payment': payments.first(),  # No additional query since we already have ordered payments
         'outstanding_balance': outstanding_balance
     }
     return render(request, 'subscriber/payment_list.html', context)
@@ -346,8 +356,12 @@ def payment_list(request):
 
 @login_required(login_url='subscriber:login')
 def payment_detail(request, payment_id):
-    customer = get_object_or_404(Customer, user=request.user)
-    payment = get_object_or_404(Payment, id=payment_id, bill__customer=customer)
+    customer = get_object_or_404(Customer.objects.select_related('user'), user=request.user)
+    payment = get_object_or_404(
+        Payment.objects.select_related('bill', 'bill__customer'),
+        id=payment_id,
+        bill__customer=customer
+    )
     return render(request, 'subscriber/payment_detail.html', {'payment': payment})
 
 
@@ -424,9 +438,49 @@ def make_payment(request, bill_id):
                 return redirect('subscriber:make_payment', bill_id=bill_id)
 
             # Get the confirmed values from the form
-            confirmed_amount = request.POST.get('confirmed_amount')
+            confirmed_amount = Decimal(request.POST.get('confirmed_amount', '0'))
             confirmed_reference = request.POST.get('confirmed_reference')
             confirmed_date = request.POST.get('confirmed_date')
+
+            # Validate confirmed values
+            if not confirmed_amount or not confirmed_reference or not confirmed_date:
+                messages.error(request, 'Please confirm all payment details')
+                return redirect('subscriber:make_payment', bill_id=bill_id)
+
+            # Validate amount matches bill amount
+            if abs(confirmed_amount - bill.amount) > Decimal('0.01'):
+                messages.error(request, 'Payment amount does not match bill amount')
+                return redirect('subscriber:make_payment', bill_id=bill_id)
+
+            try:
+                # Create/Update payment record
+                payment = Payment.objects.create(
+                    bill=bill,
+                    amount=confirmed_amount,
+                    payment_method='gcash',
+                    transaction_id=confirmed_reference,
+                )
+                payment.save()
+                
+                # Update the bill status
+                bill.status = 'paid'
+                bill.payment_date = timezone.now()
+                bill.save()
+                
+                # Create notification
+                Notification.objects.create(
+                    customer=bill.customer,
+                    type='payment',
+                    title='Payment Successful',
+                    message=f'Your GCash payment of ₱{confirmed_amount} for Bill #{bill.id} has been submitted.'
+                )
+
+                messages.success(request, 'Your GCash payment has been submitted.')
+                return redirect('subscriber:payment_detail', payment_id=payment.id)
+
+            except Exception as e:
+                messages.error(request, f'Error processing payment: {str(e)}')
+                return redirect('subscriber:make_payment', bill_id=bill_id)
 
     context = {
         'bill': bill,
@@ -572,7 +626,7 @@ def stripe_webhook(request):
                 customer=bill.customer,
                 type='payment',
                 title='Payment Successful',
-                message=f'Your payment of ₱{payment.amount} for Bill #{bill.id} has been received.'
+                message=f'Your Stripe payment of ₱{payment.amount} for Bill #{bill.id} has been submitted.'
             )
 
         return HttpResponse(status=200)
@@ -586,52 +640,85 @@ def stripe_webhook(request):
 
 
 @login_required(login_url='subscriber:login')
+def payment_success(request):
+    session_id = request.GET.get('session_id')
+    
+    try:
+        # Verify the payment session
+        session = stripe.checkout.Session.retrieve(session_id)
+        
+        if session.payment_status == 'paid':
+            # Get the payment record
+            payment = Payment.objects.get(transaction_id=session_id)
+            messages.success(request, 'Your Stripe payment has been submitted.')
+            return redirect('subscriber:payment_detail', payment_id=payment.id)
+            
+    except Exception as e:
+        messages.error(request, f'Error processing payment: {str(e)}')
+    
+    return redirect('subscriber:billing_list')
+
+
+@login_required(login_url='subscriber:login')
+def payment_cancel(request):
+    messages.warning(request, 'Payment was cancelled.')
+    return redirect('subscriber:billing_list')
+
+
+@login_required(login_url='subscriber:login')
 def profile_view(request):
-    customer = get_object_or_404(Customer, user=request.user)
+    customer = get_object_or_404(Customer.objects.select_related('user', 'plan'), user=request.user)
 
-    # Get recent bills
-    recent_bills = Bill.objects.filter(customer=customer).order_by('-bill_date')[:5]
+    # Prefetch all related data in minimal queries
+    recent_bills = Bill.objects.filter(
+        customer=customer
+    ).order_by('-bill_date')[:5].values(
+        'bill_date', 'amount', 'due_date'
+    )
 
-    # Get recent payments
-    recent_payments = Payment.objects.filter(bill__customer=customer).order_by('-payment_date')[:5]
+    recent_payments = Payment.objects.filter(
+        bill__customer=customer
+    ).order_by('-payment_date')[:5].values(
+        'payment_date', 'amount', 'payment_method'
+    )
 
-    # Get recent notifications
-    recent_notifications = Notification.objects.filter(customer=customer).order_by('-sent_date')[:5]
+    recent_notifications = Notification.objects.filter(
+        customer=customer
+    ).order_by('-sent_date')[:5].values(
+        'sent_date', 'title', 'message'
+    )
 
-    # Combine all activities
+    # Combine activities more efficiently
     activities = []
 
     # Add bills to activities
     for bill in recent_bills:
-        # Convert date to datetime if it's a date object
-        bill_date = timezone.make_aware(datetime.combine(bill.bill_date, datetime.min.time())) if isinstance(
-            bill.bill_date, date) else bill.bill_date
+        bill_date = timezone.make_aware(datetime.combine(bill['bill_date'], datetime.min.time())) \
+            if isinstance(bill['bill_date'], date) else bill['bill_date']
         activities.append({
             'date': bill_date,
             'title': 'New Bill Generated',
-            'description': f'Bill amount: ₱{bill.amount} due on {bill.due_date.strftime("%B %d, %Y")}'
+            'description': f'Bill amount: ₱{bill["amount"]} due on {bill["due_date"].strftime("%B %d, %Y")}'
         })
 
     # Add payments to activities
     for payment in recent_payments:
         activities.append({
-            'date': payment.payment_date,
+            'date': payment['payment_date'],
             'title': 'Payment Made',
-            'description': f'Paid ₱{payment.amount} via {payment.get_payment_method_display()}'
+            'description': f'Paid ₱{payment["amount"]} via {dict(Payment.PAYMENT_METHOD_CHOICES)[payment["payment_method"]]}'
         })
 
     # Add notifications to activities
     for notification in recent_notifications:
         activities.append({
-            'date': notification.sent_date,
-            'title': notification.title,
-            'description': notification.message
+            'date': notification['sent_date'],
+            'title': notification['title'],
+            'description': notification['message']
         })
 
     # Sort activities by date, most recent first
     activities.sort(key=lambda x: x['date'], reverse=True)
-
-    # Take only the 10 most recent activities
     recent_activities = activities[:10]
 
     context = {
@@ -709,19 +796,25 @@ def profile_edit(request):
 
 @login_required(login_url='subscriber:login')
 def notification_list(request):
-    customer = get_object_or_404(Customer, user=request.user)
-    notifications = Notification.objects.filter(customer=customer).order_by('-sent_date')
+    customer = get_object_or_404(Customer.objects.select_related('user'), user=request.user)
+    notifications = Notification.objects.select_related('customer').filter(
+        customer=customer
+    ).order_by('-sent_date')
     return render(request, 'subscriber/notification_list.html', {'notifications': notifications})
 
 
 @login_required(login_url='subscriber:login')
 def notification_detail(request, notification_id):
-    customer = get_object_or_404(Customer, user=request.user)
-    notification = get_object_or_404(Notification, id=notification_id, customer=customer)
+    customer = get_object_or_404(Customer.objects.select_related('user'), user=request.user)
+    notification = get_object_or_404(
+        Notification.objects.select_related('customer'),
+        id=notification_id,
+        customer=customer
+    )
 
     if not notification.is_read:
         notification.is_read = True
-        notification.save()
+        notification.save(update_fields=['is_read'])
 
     return render(request, 'subscriber/notification_detail.html', {'notification': notification})
 
@@ -741,38 +834,3 @@ def mark_notification_read(request, notification_id):
     notification.is_read = True
     notification.save()
     return JsonResponse({'status': 'success'})
-
-
-@login_required(login_url='subscriber:login')
-def payment_success(request):
-    session_id = request.GET.get('session_id')
-    bill_id = request.GET.get('bill_id')
-    
-    try:
-        # Verify the payment session
-        session = stripe.checkout.Session.retrieve(session_id)
-        
-        if session.payment_status == 'paid':
-            # Update the payment record
-            payment = Payment.objects.get(transaction_id=session_id)
-            payment.save()
-            
-            # Update the bill status
-            bill = Bill.objects.get(id=bill_id)
-            bill.status = 'paid'
-            bill.payment_date = timezone.now()
-            bill.save()
-            
-            messages.success(request, 'Payment successful! Thank you for your payment.')
-            return redirect('subscriber:payment_detail', payment_id=payment.id)
-            
-    except Exception as e:
-        messages.error(request, f'Error processing payment: {str(e)}')
-    
-    return redirect('subscriber:billing_list')
-
-
-@login_required(login_url='subscriber:login')
-def payment_cancel(request):
-    messages.warning(request, 'Payment was cancelled.')
-    return redirect('subscriber:billing_list')
