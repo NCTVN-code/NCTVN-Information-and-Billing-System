@@ -36,8 +36,4 @@ urlpatterns = [
     
     # Reports
     path('reports/', report_dashboard, name='report_dashboard'),
-    
-    # Notifications
-    path('notifications/', notification_list, name='notification_list'),
-    path('notifications/send/<int:customer_id>/', send_notification, name='send_notification'),
 ]

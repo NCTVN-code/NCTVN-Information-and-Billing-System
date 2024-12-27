@@ -32,13 +32,18 @@ class Customer(models.Model):
     plan = models.ForeignKey(CablePlan, on_delete=models.SET_NULL, null=True, blank=True)
     phone = models.CharField(max_length=20)
     address = models.TextField()
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', db_index=True)
     application_date = models.DateTimeField(auto_now_add=True)
     installation_date = models.DateField(null=True, blank=True)
     installation_time = models.CharField(max_length=20, choices=TIME_SLOT_CHOICES, null=True, blank=True)
     installation_notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['status', 'created_at']),
+        ]
 
     def __str__(self):
         return f"{self.user.get_full_name() or self.user.username} - {self.status}"
@@ -52,9 +57,9 @@ class Bill(models.Model):
 
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
-    bill_date = models.DateField()
-    due_date = models.DateField()
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='unpaid')
+    bill_date = models.DateField(db_index=True)
+    due_date = models.DateField(db_index=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='unpaid', db_index=True)
     payment_date = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -63,6 +68,13 @@ class Bill(models.Model):
     overdue_notification_sent = models.BooleanField(default=False)
     warning_notification_sent = models.BooleanField(default=False)
     disconnection_notification_sent = models.BooleanField(default=False)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['status', 'bill_date']),
+            models.Index(fields=['customer', 'status']),
+            models.Index(fields=['bill_date', 'status']),
+        ]
 
     def __str__(self):
         return f"Bill for {self.customer.user.get_full_name()} - {self.bill_date}"
@@ -77,10 +89,16 @@ class Payment(models.Model):
     bill = models.ForeignKey(Bill, on_delete=models.CASCADE)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES)
-    payment_date = models.DateTimeField(auto_now_add=True)
+    payment_date = models.DateTimeField(auto_now_add=True, db_index=True)
     transaction_id = models.CharField(max_length=100, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['payment_date', 'amount']),
+            models.Index(fields=['bill', 'payment_date']),
+        ]
 
     def __str__(self):
         return f"Payment for {self.bill.customer.user.get_full_name()} - {self.payment_date}"

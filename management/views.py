@@ -781,59 +781,79 @@ def report_dashboard(request):
     current_year = today.year
     current_month = today.month
 
-    # Get all approved customers with their latest bills and payments
-    customers = Customer.objects.select_related('user', 'plan').prefetch_related(
-        'bill_set', 'bill_set__payment_set'
+    # Optimize customer query with select_related and prefetch_related
+    customers = Customer.objects.select_related(
+        'user', 'plan'
     ).filter(status='approved')
 
-    # Calculate paid subscribers (customers with paid bills in current month)
+    # Get all bills for the current month in a single query
+    current_month_bills = Bill.objects.select_related(
+        'customer', 'customer__user', 'customer__plan'
+    ).filter(
+        customer__status='approved',
+        bill_date__year=current_year,
+        bill_date__month=current_month
+    ).prefetch_related('payment_set')
+
+    # Get paid and unpaid bills efficiently
+    paid_bills = {
+        bill.customer_id: bill 
+        for bill in current_month_bills.filter(status='paid')
+    }
+    unpaid_bills = {
+        bill.customer_id: bill 
+        for bill in current_month_bills.filter(status='unpaid')
+    }
+
+    # Process paid subscribers
     paid_subscribers_list = []
     for customer in customers:
-        latest_paid_bill = customer.bill_set.filter(
-            status='paid',
-            bill_date__year=current_year,
-            bill_date__month=current_month
-        ).first()
-        if latest_paid_bill:
-            latest_payment = latest_paid_bill.payment_set.first()
-            paid_subscribers_list.append({
-                'user': customer.user,
-                'plan': customer.plan,
-                'last_payment_date': latest_payment.payment_date if latest_payment else None,
-                'last_payment_amount': latest_payment.amount if latest_payment else 0
-            })
+        if customer.id in paid_bills:
+            bill = paid_bills[customer.id]
+            latest_payment = bill.payment_set.first()
+            if latest_payment:
+                paid_subscribers_list.append({
+                    'user': customer.user,
+                    'plan': customer.plan,
+                    'last_payment_date': latest_payment.payment_date,
+                    'last_payment_amount': latest_payment.amount
+                })
 
-    # Calculate unpaid subscribers
+    # Process unpaid subscribers
     unpaid_subscribers_list = []
     for customer in customers:
-        unpaid_bill = customer.bill_set.filter(status='unpaid').first()
-        if unpaid_bill:
-            days_overdue = (today - unpaid_bill.due_date).days if today > unpaid_bill.due_date else 0
+        if customer.id in unpaid_bills:
+            bill = unpaid_bills[customer.id]
+            days_overdue = (today - bill.due_date).days if today > bill.due_date else 0
             unpaid_subscribers_list.append({
                 'user': customer.user,
                 'plan': customer.plan,
-                'bill': unpaid_bill,
+                'bill': bill,
                 'days_overdue': days_overdue
             })
 
-    # Calculate monthly revenue data (for the current year)
-    monthly_revenue_data = []
-    monthly_revenue_labels = []
+    # Calculate monthly revenue data efficiently using a single query
+    monthly_revenues = Payment.objects.filter(
+        payment_date__year=current_year
+    ).values(
+        'payment_date__month'
+    ).annotate(
+        total=Sum('amount')
+    ).order_by('payment_date__month')
 
-    for month in range(1, 13):
-        month_revenue = Payment.objects.filter(
-            payment_date__year=current_year,
-            payment_date__month=month
-        ).aggregate(total=Sum('amount'))['total'] or 0
+    # Process monthly revenue data
+    monthly_revenue_data = [0] * 12  # Initialize with zeros
+    for revenue in monthly_revenues:
+        month_index = revenue['payment_date__month'] - 1
+        monthly_revenue_data[month_index] = float(revenue['total'])
 
-        monthly_revenue_data.append(float(month_revenue))
-        monthly_revenue_labels.append(timezone.datetime(current_year, month, 1).strftime('%B'))
+    monthly_revenue_labels = [
+        timezone.datetime(current_year, month, 1).strftime('%B')
+        for month in range(1, 13)
+    ]
 
-    # Calculate current month's revenue
-    current_month_revenue = Payment.objects.filter(
-        payment_date__year=current_year,
-        payment_date__month=current_month
-    ).aggregate(total=Sum('amount'))['total'] or 0
+    # Get current month's revenue
+    current_month_revenue = monthly_revenue_data[current_month - 1]
 
     context = {
         # Statistics
@@ -852,40 +872,3 @@ def report_dashboard(request):
 
     return render(request, 'report_dashboard.html', context)
 
-
-# Notification Views
-@login_required(login_url='admin_login')
-def notification_list(request):
-    notifications = Notification.objects.select_related('customer').all()
-    return render(request, 'notification_list.html', {'notifications': notifications})
-
-
-@login_required(login_url='admin_login')
-def send_notification(request, customer_id):
-    customer = get_object_or_404(Customer, id=customer_id)
-
-    if request.method == 'POST':
-        notification_type = request.POST.get('type')
-        title = request.POST.get('title')
-        message = request.POST.get('message')
-
-        Notification.objects.create(
-            customer=customer,
-            type=notification_type,
-            title=title,
-            message=message
-        )
-
-        # Send email
-        send_mail(
-            title,
-            message,
-            settings.DEFAULT_FROM_EMAIL,
-            [customer.user.email],
-            fail_silently=True,
-        )
-
-        messages.success(request, 'Notification sent successfully.')
-        return redirect('notification_list')
-
-    return render(request, 'send_notification.html', {'customer': customer})
