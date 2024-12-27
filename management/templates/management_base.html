@@ -371,7 +371,7 @@
                         <div class="brand-logo">
                             <i class="fas fa-tv"></i>
                             <div class="brand-text">
-                                <h1 class="brand-title">CableNet</h1>
+                                <h1 class="brand-title">NCTVN</h1>
                                 <span class="brand-subtitle">Management</span>
                             </div>
                         </div>
@@ -563,6 +563,32 @@
         $(document).ready(function() {
             // Initialize tooltips
             $('[title]').tooltip();
+        });
+    </script>
+
+    <script>
+        $(document).ready(function() {
+            // Auto-generate Transaction ID
+            function generateTransactionId() {
+                const timestamp = new Date().getTime().toString().slice(-6);
+                const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+                return `TXN${timestamp}${random}`;
+            }
+
+            // Handle payment method change
+            $('#payment_method').change(function() {
+                const paymentMethod = $(this).val();
+                const transactionIdInput = $('#transaction_id');
+
+                if (paymentMethod === 'cash') {
+                    transactionIdInput.val(generateTransactionId());
+                } else {
+                    transactionIdInput.val('');
+                }
+            });
+
+            // Set initial state if payment method is pre-selected
+            $('#payment_method').trigger('change');
         });
     </script>
 

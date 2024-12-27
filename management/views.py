@@ -857,8 +857,6 @@ def report_dashboard(request):
     # Get all bills for current month with payments in a single query
     current_month_bills = Bill.objects.select_related(
         'customer__user', 'customer__plan'
-    ).prefetch_related(
-        'payment_set'
     ).filter(
         customer__status='approved',
         bill_date__year=current_year,
@@ -869,8 +867,16 @@ def report_dashboard(request):
             default=False,
             output_field=models.BooleanField()
         ),
-        latest_payment_date=models.Max('payment_set__payment_date'),
-        latest_payment_amount=models.Max('payment_set__amount')
+        latest_payment_date=models.Subquery(
+            Payment.objects.filter(
+                bill_id=models.OuterRef('id')
+            ).order_by('-payment_date').values('payment_date')[:1]
+        ),
+        latest_payment_amount=models.Subquery(
+            Payment.objects.filter(
+                bill_id=models.OuterRef('id')
+            ).order_by('-payment_date').values('amount')[:1]
+        )
     )
 
     # Process subscribers efficiently

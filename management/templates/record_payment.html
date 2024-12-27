@@ -136,25 +136,6 @@
             order: [[0, 'desc']], // Sort by date by default
             pageLength: 5
         });
-
-        // Auto-generate Transaction ID
-        function generateTransactionId() {
-            const timestamp = new Date().getTime().toString().slice(-6);
-            const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-            return `TXN${timestamp}${random}`;
-        }
-
-        // Set initial transaction ID
-        if (!$('#transaction_id').val()) {
-            $('#transaction_id').val(generateTransactionId());
-        }
-
-        // Update transaction ID when payment method changes
-        $('#payment_method').change(function() {
-            if (!$('#transaction_id').val() || $('#transaction_id').val().startsWith('TXN')) {
-                $('#transaction_id').val(generateTransactionId());
-            }
-        });
     });
 </script>
 {% endblock %}

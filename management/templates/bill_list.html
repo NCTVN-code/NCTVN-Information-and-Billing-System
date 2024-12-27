@@ -393,7 +393,7 @@ $(document).ready(function() {
         var status = button.data('status');
 
         // Set form action
-        modal.find('#editBillForm').attr('action', '/management/bills/' + billId + '/edit/');
+        modal.find('#editBillForm').attr('action', "{% url 'edit_bill' bill_id=0 %}".replace('0', billId));
 
         // Set selected customer
         var customerSelect = modal.find('#editCustomerSelect');
