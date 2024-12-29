@@ -314,26 +314,51 @@ $(document).ready(function() {
 
         // Clear existing filters
         table.columns().search('').draw();
-        $.fn.dataTable.ext.search = [];
+        $.fn.dataTable.ext.search = []; // Clear existing search functions
 
-        // Apply payment method filter with exact matching
+        // Apply new filters
         if (method) {
-            table.column(3).search('^' + method + '$', true, false).draw();
+            $.fn.dataTable.ext.search.push(
+                function(settings, data, dataIndex) {
+                    // Get the HTML content from the payment method column
+                    var cellContent = data[3];
+                    
+                    // Create a temporary div to parse the HTML
+                    var temp = document.createElement('div');
+                    temp.innerHTML = cellContent;
+                    
+                    // Get the text content and clean it
+                    var paymentMethod = temp.textContent.trim().toLowerCase();
+                    
+                    // Simple exact match
+                    if (method === '') return true;
+                    
+                    // Match based on the payment method selected
+                    switch(method) {
+                        case 'cash':
+                            return paymentMethod === 'cash';
+                        case 'gcash':
+                            return paymentMethod === 'gcash';
+                        case 'stripe':
+                            return paymentMethod === 'stripe';
+                        default:
+                            return true;
+                    }
+                }
+            );
+            table.draw();
         }
-
-        // Apply amount filter
         if (minAmount || maxAmount) {
             $.fn.dataTable.ext.search.push(
                 function(settings, data, dataIndex) {
-                    var amount = parseFloat(data[2].replace('₱', '').replace(/,/g, ''));
+                    var amount = parseFloat(data[2].replace('₱', ''));
                     var min = parseFloat(minAmount) || 0;
                     var max = parseFloat(maxAmount) || Infinity;
                     return amount >= min && amount <= max;
                 }
             );
+            table.draw();
         }
-
-        // Apply date filter
         if (startDate && endDate) {
             $.fn.dataTable.ext.search.push(
                 function(settings, data, dataIndex) {
@@ -343,9 +368,9 @@ $(document).ready(function() {
                     return date >= start && date <= end;
                 }
             );
+            table.draw();
         }
 
-        table.draw();
         $('#filterModal').modal('hide');
     });
 });

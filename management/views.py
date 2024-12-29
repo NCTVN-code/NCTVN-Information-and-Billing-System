@@ -734,11 +734,6 @@ def payment_list(request):
         'bill__customer__plan'
     )
 
-    # Get filter parameters
-    payment_method = request.GET.get('payment_method')
-    if payment_method:
-        payments = payments.filter(payment_method__exact=payment_method)
-
     # Get all statistics in a single query
     today = timezone.now().date()
     payment_stats = payments.aggregate(
