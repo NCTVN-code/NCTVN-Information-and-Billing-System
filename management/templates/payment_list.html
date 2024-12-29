@@ -314,22 +314,26 @@ $(document).ready(function() {
 
         // Clear existing filters
         table.columns().search('').draw();
+        $.fn.dataTable.ext.search = [];
 
-        // Apply new filters
+        // Apply payment method filter with exact matching
         if (method) {
-            table.column(3).search(method).draw();
+            table.column(3).search('^' + method + '$', true, false).draw();
         }
+
+        // Apply amount filter
         if (minAmount || maxAmount) {
             $.fn.dataTable.ext.search.push(
                 function(settings, data, dataIndex) {
-                    var amount = parseFloat(data[2].replace('₱', ''));
+                    var amount = parseFloat(data[2].replace('₱', '').replace(/,/g, ''));
                     var min = parseFloat(minAmount) || 0;
                     var max = parseFloat(maxAmount) || Infinity;
                     return amount >= min && amount <= max;
                 }
             );
-            table.draw();
         }
+
+        // Apply date filter
         if (startDate && endDate) {
             $.fn.dataTable.ext.search.push(
                 function(settings, data, dataIndex) {
@@ -339,9 +343,9 @@ $(document).ready(function() {
                     return date >= start && date <= end;
                 }
             );
-            table.draw();
         }
 
+        table.draw();
         $('#filterModal').modal('hide');
     });
 });
