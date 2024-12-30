@@ -13,7 +13,7 @@ from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.core.mail import send_mail
-from django.db import models
+from django.db import models, IntegrityError
 from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.utils import timezone
@@ -478,8 +478,14 @@ def make_payment(request, bill_id):
                 messages.success(request, 'Your GCash payment has been submitted.')
                 return redirect('subscriber:payment_detail', payment_id=payment.id)
 
+            except IntegrityError as e:
+                if 'transaction_id' in str(e):
+                    messages.error(request, 'Invalid GCash receipt.')
+                else:
+                    messages.error(request, 'An error occurred while processing your payment. Please try again.')
+                return redirect('subscriber:make_payment', bill_id=bill_id)
             except Exception as e:
-                messages.error(request, f'Error processing payment: {str(e)}')
+                messages.error(request, 'An error occurred while processing your payment. Please try again.')
                 return redirect('subscriber:make_payment', bill_id=bill_id)
 
     context = {

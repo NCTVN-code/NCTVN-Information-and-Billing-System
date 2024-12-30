@@ -90,44 +90,6 @@
                     {% endif %}
                 </div>
             </div>
-
-            <!-- Channel List -->
-            <div class="card shadow">
-                <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                    <h6 class="m-0 font-weight-bold text-primary">Channel List</h6>
-                    <button class="btn btn-sm btn-outline-primary" id="printChannelList">
-                        <i class="fas fa-print me-2"></i>Print
-                    </button>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover datatable">
-                            <thead>
-                                <tr>
-                                    <th>Channel</th>
-                                    <th>Number</th>
-                                    <th>Category</th>
-                                    <th>Quality</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for channel in channels %}
-                                <tr>
-                                    <td>{{ channel.name }}</td>
-                                    <td>{{ channel.number }}</td>
-                                    <td>{{ channel.category }}</td>
-                                    <td>{{ channel.quality }}</td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="4" class="text-center">Channel list not available</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
         </div>
 
         <!-- Subscription Info -->
@@ -213,32 +175,5 @@
     .support-info strong {
         color: var(--dark-bg);
     }
-
-    @media print {
-        .navbar, .card-header button, .support-info {
-            display: none !important;
-        }
-        .card {
-            border: none !important;
-            box-shadow: none !important;
-        }
-    }
 </style>
 {% endblock %}
-
-{% block extra_js %}
-<script>
-$(document).ready(function() {
-    // Initialize DataTable for channel list
-    initializeDataTable('.datatable', {
-        pageLength: 10,
-        order: [[1, 'asc']]  // Sort by channel number
-    });
-
-    // Print channel list
-    $('#printChannelList').click(function() {
-        window.print();
-    });
-});
-</script>
-{% endblock %} 

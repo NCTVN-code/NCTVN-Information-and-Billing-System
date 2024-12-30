@@ -299,13 +299,6 @@ $(document).ready(function() {
         const paymentMethod = $('#payment_method').val();
         
         // Form validation
-        if (!this.checkValidity()) {
-            e.stopPropagation();
-            $(this).addClass('was-validated');
-            return;
-        }
-
-        // Check terms agreement
         if (!$('#terms').is(':checked')) {
             $('#terms').addClass('is-invalid');
             return;
@@ -345,6 +338,13 @@ $(document).ready(function() {
                 alert('Payment failed: ' + error.message);
             }
         } else if (paymentMethod === 'gcash') {
+            // Form validation for GCash
+            if (!this.checkValidity()) {
+                e.stopPropagation();
+                $(this).addClass('was-validated');
+                return;
+            }
+
             // Validate GCash specific fields
             if (!$('#receipt').val()) {
                 $('#receipt').addClass('is-invalid');
