@@ -408,13 +408,8 @@ def make_payment(request, bill_id):
                     }
                 )
 
-                # Create a pending payment record
-                Payment.objects.create(
-                    bill=bill,
-                    amount=bill.amount,
-                    payment_method='stripe',
-                    transaction_id=checkout_session.id
-                )
+                # Store session ID in session for verification
+                request.session['stripe_session_id'] = checkout_session.id
 
                 return JsonResponse({
                     'session_id': checkout_session.id
@@ -618,11 +613,22 @@ def stripe_webhook(request):
         if event.type == 'checkout.session.completed':
             session = event.data.object
             
-            # Get the payment record
-            payment = Payment.objects.get(transaction_id=session.id)
+            # Get the bill from metadata
+            bill_id = session.metadata.get('bill_id')
+            if not bill_id:
+                return HttpResponse(status=400)
+                
+            bill = Bill.objects.get(id=bill_id)
+            
+            # Create the payment record only after successful payment
+            payment = Payment.objects.create(
+                bill=bill,
+                amount=bill.amount,
+                payment_method='stripe',
+                transaction_id=session.id
+            )
             
             # Update bill status
-            bill = payment.bill
             bill.status = 'paid'
             bill.payment_date = timezone.now()
             bill.save()
@@ -648,25 +654,44 @@ def stripe_webhook(request):
 @login_required(login_url='subscriber:login')
 def payment_success(request):
     session_id = request.GET.get('session_id')
+    stored_session_id = request.session.get('stripe_session_id')
+    
+    # Clear the stored session ID
+    if 'stripe_session_id' in request.session:
+        del request.session['stripe_session_id']
     
     try:
+        # Verify the session ID matches what we stored
+        if not stored_session_id or stored_session_id != session_id:
+            messages.error(request, 'Invalid payment session.')
+            return redirect('subscriber:billing_list')
+            
         # Verify the payment session
         session = stripe.checkout.Session.retrieve(session_id)
         
         if session.payment_status == 'paid':
-            # Get the payment record
-            payment = Payment.objects.get(transaction_id=session_id)
-            messages.success(request, 'Your Stripe payment has been submitted.')
-            return redirect('subscriber:payment_detail', payment_id=payment.id)
+            try:
+                # Get the payment record (it should be created by webhook)
+                payment = Payment.objects.get(transaction_id=session_id)
+                messages.success(request, 'Your Stripe payment has been submitted.')
+                return redirect('subscriber:payment_detail', payment_id=payment.id)
+            except Payment.DoesNotExist:
+                # If webhook hasn't processed yet, show a pending message
+                messages.info(request, 'Your payment is being processed. Please check back in a few moments.')
+                return redirect('subscriber:billing_list')
             
     except Exception as e:
-        messages.error(request, f'Error processing payment: {str(e)}')
+        messages.error(request, f'Error verifying payment: {str(e)}')
     
     return redirect('subscriber:billing_list')
 
 
 @login_required(login_url='subscriber:login')
 def payment_cancel(request):
+    # Clear any stored session ID
+    if 'stripe_session_id' in request.session:
+        del request.session['stripe_session_id']
+        
     messages.warning(request, 'Payment was cancelled.')
     return redirect('subscriber:billing_list')
 
