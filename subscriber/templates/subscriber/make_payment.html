@@ -305,6 +305,15 @@ $(document).ready(function() {
         }
         
         if (paymentMethod === 'stripe') {
+            // Get the bill amount
+            const billAmount = parseFloat('{{ bill.amount }}');
+            
+            // Check minimum amount for Stripe (PHP 50.00 minimum)
+            if (billAmount < 50) {
+                alert('Minimum Stripe payment is PHP 50.00. Use GCash instead.');
+                return;
+            }
+            
             showLoading();
             
             try {
