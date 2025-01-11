@@ -470,6 +470,29 @@ def make_payment(request, bill_id):
                     message=f'Your GCash payment of ₱{confirmed_amount} for Bill #{bill.id} has been submitted.'
                 )
 
+                # Send email confirmation
+                email_message = f"""Dear {bill.customer.user.get_full_name()},
+
+We have received your GCash payment of ₱{confirmed_amount} for your cable TV service bill dated {bill.bill_date.strftime("%B %d, %Y")}.
+
+Payment Details:
+- Amount: ₱{confirmed_amount}
+- Reference Number: {confirmed_reference}
+- Date: {confirmed_date}
+
+Thank you for your payment.
+
+Best regards,
+Kabacan Northwest Cable TV Network Team"""
+
+                send_mail(
+                    subject='Payment Confirmation',
+                    message=email_message,
+                    from_email=settings.EMAIL_HOST_USER,
+                    recipient_list=[bill.customer.user.email],
+                    fail_silently=True,
+                )
+
                 messages.success(request, 'Your GCash payment has been submitted.')
                 return redirect('subscriber:payment_detail', payment_id=payment.id)
 
@@ -639,6 +662,29 @@ def stripe_webhook(request):
                 type='payment',
                 title='Payment Successful',
                 message=f'Your Stripe payment of ₱{payment.amount} for Bill #{bill.id} has been submitted.'
+            )
+
+            # Send email confirmation
+            email_message = f"""Dear {bill.customer.user.get_full_name()},
+
+We have received your Stripe payment of ₱{payment.amount} for your cable TV service bill dated {bill.bill_date.strftime("%B %d, %Y")}.
+
+Payment Details:
+- Amount: ₱{payment.amount}
+- Transaction ID: {session.id}
+- Date: {timezone.now().strftime("%B %d, %Y")}
+
+Thank you for your payment.
+
+Best regards,
+Kabacan Northwest Cable TV Network Team"""
+
+            send_mail(
+                subject='Payment Confirmation',
+                message=email_message,
+                from_email=settings.EMAIL_HOST_USER,
+                recipient_list=[bill.customer.user.email],
+                fail_silently=True,
             )
 
         return HttpResponse(status=200)
