@@ -188,7 +188,24 @@ def plan_list(request):
 @login_required(login_url='subscriber:login')
 def plan_detail(request, plan_id):
     plan = get_object_or_404(CablePlan, id=plan_id)
-    return render(request, 'subscriber/plan_detail.html', {'plan': plan})
+    
+    # Get the current plan for comparison
+    try:
+        customer = Customer.objects.select_related('plan').get(user=request.user)
+        current_plan = customer.plan
+    except Customer.DoesNotExist:
+        current_plan = None
+    
+    # Split features into a list if features exist
+    features_list = plan.features.split('\n') if plan.features else []
+    
+    context = {
+        'plan': plan,
+        'current_plan': current_plan,
+        'channels': [],  # Add your channel logic here if needed
+        'features_list': features_list
+    }
+    return render(request, 'subscriber/plan_detail.html', context)
 
 
 @login_required(login_url='subscriber:login')

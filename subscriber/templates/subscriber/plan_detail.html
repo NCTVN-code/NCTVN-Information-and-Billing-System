@@ -84,8 +84,7 @@
                     <div class="plan-features">
                         <h6 class="text-primary mb-3">Features</h6>
                         <div class="row">
-                            {% with features=plan.features|split:"\n" %}
-                            {% for feature in features %}
+                            {% for feature in features_list %}
                             <div class="col-md-6 mb-2">
                                 <div class="feature-item">
                                     <i class="fas fa-check-circle text-success me-2"></i>
@@ -93,41 +92,7 @@
                                 </div>
                             </div>
                             {% endfor %}
-                            {% endwith %}
                         </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Channel List -->
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Channel List</h6>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover datatable">
-                            <thead>
-                                <tr>
-                                    <th>Channel</th>
-                                    <th>Category</th>
-                                    <th>Quality</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for channel in channels %}
-                                <tr>
-                                    <td>{{ channel.name }}</td>
-                                    <td>{{ channel.category }}</td>
-                                    <td>{{ channel.quality }}</td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="3" class="text-center">Channel list not available</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
                     </div>
                 </div>
             </div>
