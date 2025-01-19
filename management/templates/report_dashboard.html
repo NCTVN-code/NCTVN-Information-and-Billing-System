@@ -49,7 +49,7 @@
                             <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
                                 Monthly Revenue</div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                ${{ monthly_revenue.total|default:0|floatformat:2 }}
+                                ₱{{ monthly_revenue.total|default:0|floatformat:2 }}
                             </div>
                         </div>
                         <div class="col-auto">
@@ -131,7 +131,7 @@
                                             <td>{{ customer.user.get_full_name }}</td>
                                             <td>{{ customer.plan.name }}</td>
                                             <td>{{ customer.last_payment_date|date:"M d, Y" }}</td>
-                                            <td>${{ customer.last_payment_amount|floatformat:2 }}</td>
+                                            <td>₱{{ customer.last_payment_amount|floatformat:2 }}</td>
                                             <td>
                                                 <span class="badge bg-success">Paid</span>
                                             </td>
@@ -161,7 +161,7 @@
                                             <td>{{ customer.user.get_full_name }}</td>
                                             <td>{{ customer.plan.name }}</td>
                                             <td>{{ customer.bill.due_date|date:"M d, Y" }}</td>
-                                            <td>${{ customer.bill.amount|floatformat:2 }}</td>
+                                            <td>₱{{ customer.bill.amount|floatformat:2 }}</td>
                                             <td>{{ customer.days_overdue }}</td>
                                         </tr>
                                         {% endfor %}

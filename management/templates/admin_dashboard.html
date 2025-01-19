@@ -65,7 +65,7 @@
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
                                 Total Revenue</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">${{ total_revenue|floatformat:2 }}</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">₱{{ total_revenue|floatformat:2 }}</div>
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
@@ -169,7 +169,7 @@
                                 {% for payment in recent_payments %}
                                 <tr>
                                     <td>{{ payment.bill.customer.user.get_full_name }}</td>
-                                    <td>${{ payment.amount|floatformat:2 }}</td>
+                                    <td>₱{{ payment.amount|floatformat:2 }}</td>
                                     <td>{{ payment.payment_date|date:"M d, Y" }}</td>
                                 </tr>
                                 {% empty %}
@@ -220,7 +220,7 @@ $(document).ready(function() {
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            return '$' + value;
+                            return '₱' + value;
                         }
                     }
                 }

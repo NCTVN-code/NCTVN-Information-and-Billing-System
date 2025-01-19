@@ -1,0 +1,58 @@
+<thead>
+    <tr>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Phone</th>
+        <th>Plan</th>
+        <th>Join Date</th>
+        <th>Actions</th>
+    </tr>
+</thead>
+<tbody>
+    {% for customer in customers %}
+    <tr>
+        <td>{{ customer.user.get_full_name }}</td>
+        <td>{{ customer.user.email }}</td>
+        <td>{{ customer.phone }}</td>
+        <td>
+            {% if customer.plan %}
+                {{ customer.plan.name }}
+            {% else %}
+                <span class="text-muted">No Plan</span>
+            {% endif %}
+        </td>
+        <td>{{ customer.application_date|date:"M d, Y" }}</td>
+        <td>
+            <div class="btn-group">
+                <a href="{% url 'customer_detail' customer_id=customer.id %}" 
+                   class="btn btn-sm btn-info" title="View Details">
+                    <i class="fas fa-eye"></i>
+                </a>
+                <a href="{% url 'customer_edit' customer_id=customer.id %}" 
+                   class="btn btn-sm btn-primary" title="Edit Customer">
+                    <i class="fas fa-edit"></i>
+                </a>
+                <a href="{% url 'customer_delete' customer_id=customer.id %}" 
+                   class="btn btn-sm btn-danger" title="Delete Customer">
+                    <i class="fas fa-trash"></i>
+                </a>
+                {% if status == 'pending' and customer.plan %}
+                <a href="{% url 'customer_application' customer_id=customer.id %}" 
+                   class="btn btn-sm btn-warning" title="Review Application">
+                    <i class="fas fa-clipboard-check"></i>
+                </a>
+                {% endif %}
+            </div>
+        </td>
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="6" class="text-center py-4">
+            <div class="text-muted">
+                <i class="fas fa-users fa-2x mb-3"></i>
+                <p class="mb-0">No {{ status }} customers found.</p>
+            </div>
+        </td>
+    </tr>
+    {% endfor %}
+</tbody> 

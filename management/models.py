@@ -40,6 +40,11 @@ class Customer(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # Plan history fields
+    previous_plans = models.JSONField(default=list, blank=True, help_text="List of previous plans with dates and reasons")
+    plan_start_date = models.DateTimeField(auto_now_add=True, help_text="Start date of current plan")
+    plan_change_reason = models.TextField(blank=True, help_text="Reason for last plan change")
+
     class Meta:
         indexes = [
             models.Index(fields=['status', 'created_at']),
@@ -47,6 +52,27 @@ class Customer(models.Model):
 
     def __str__(self):
         return f"{self.user.get_full_name() or self.user.username} - {self.status}"
+
+    def add_to_plan_history(self, old_plan, reason=None):
+        """Add current plan to history when changing plans"""
+        if old_plan:
+            history_entry = {
+                'plan_id': old_plan.id,
+                'plan_name': old_plan.name,
+                'price': str(old_plan.price),
+                'channels': old_plan.channels,
+                'start_date': self.plan_start_date.isoformat(),
+                'end_date': timezone.now().isoformat(),
+                'reason': reason or self.plan_change_reason,
+                'status': self.status
+            }
+            
+            if not self.previous_plans:
+                self.previous_plans = []
+            
+            self.previous_plans.insert(0, history_entry)
+            self.plan_start_date = timezone.now()
+            self.plan_change_reason = reason or ''
 
 class Bill(models.Model):
     STATUS_CHOICES = [

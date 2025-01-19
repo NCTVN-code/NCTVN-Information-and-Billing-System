@@ -106,6 +106,18 @@
                                       placeholder="Any special instructions or requirements..."></textarea>
                         </div>
 
+                        {% if current_plan %}
+                        <!-- Reason for Change -->
+                        <div class="mb-4">
+                            <label class="form-label">Reason for Plan Change</label>
+                            <textarea class="form-control" name="change_reason" rows="3" required
+                                      placeholder="Please explain why you want to change your current plan..."></textarea>
+                            <div class="invalid-feedback">
+                                Please provide a reason for changing your plan.
+                            </div>
+                        </div>
+                        {% endif %}
+
                         <!-- Terms and Conditions -->
                         <div class="mb-4">
                             <div class="form-check">
@@ -131,6 +143,60 @@
                     </form>
                 </div>
             </div>
+
+            {% if plan_history %}
+            <!-- Plan History -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Your Plan History</h6>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        {% for history in plan_history %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker {% if forloop.first %}bg-primary{% else %}bg-light{% endif %}"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-1">{{ history.plan_name }}
+                                    {% if forloop.first and not history.end_date %}
+                                    <span class="badge bg-primary">Current</span>
+                                    {% if history.status == 'approved' %}
+                                        <span class="badge bg-success">Approved</span>
+                                    {% elif history.status == 'pending' %}
+                                        <span class="badge bg-warning text-dark">Pending</span>
+                                    {% elif history.status == 'rejected' %}
+                                        <span class="badge bg-danger">Rejected</span>
+                                    {% elif history.status == 'disconnected' %}
+                                        <span class="badge bg-secondary">Disconnected</span>
+                                    {% else %}
+                                        <span class="badge bg-light text-dark">{{ history.status|title }}</span>
+                                    {% endif %}
+                                    {% endif %}
+                                </h6>
+                                <div class="text-muted small mb-2">
+                                    {{ history.start_date|slice:"0:10" }} - 
+                                    {% if history.end_date %}
+                                        {{ history.end_date|slice:"0:10" }}
+                                    {% else %}
+                                        Present
+                                    {% endif %}
+                                </div>
+                                <div class="mb-2">
+                                    <span class="badge bg-light text-dark">₱{{ history.price }}/month</span>
+                                    <span class="badge bg-light text-dark">{{ history.channels }} Channels</span>
+                                </div>
+                                {% if history.reason %}
+                                <div class="text-muted small">
+                                    <strong>Reason for change:</strong><br>
+                                    {{ history.reason }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
         </div>
 
         <!-- Plan Summary -->
@@ -221,4 +287,157 @@ $(document).ready(function() {
     }, false);
 });
 </script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .plan-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border-radius: 1rem;
+        overflow: hidden;
+    }
+
+    .plan-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+
+    .price-tag {
+        position: relative;
+        padding: 1rem 0;
+    }
+
+    .price-tag .currency {
+        font-size: 1.25rem;
+        position: relative;
+        top: -1rem;
+    }
+
+    .price-tag .amount {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: var(--primary-color);
+    }
+
+    .price-tag .period {
+        color: var(--secondary-color);
+    }
+
+    .features-list {
+        position: relative;
+        max-height: 300px;
+        overflow: hidden;
+    }
+
+    .features-scroll {
+        max-height: 250px;
+        overflow-y: auto;
+        padding-right: 0.5rem;
+    }
+
+    .features-scroll::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .features-scroll::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 2px;
+    }
+
+    .features-scroll::-webkit-scrollbar-thumb {
+        background: #ccc;
+        border-radius: 2px;
+    }
+
+    .feature-item {
+        padding: 0.5rem;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: flex-start;
+        transition: background-color 0.2s ease;
+    }
+
+    .feature-item:hover {
+        background-color: rgba(37, 99, 235, 0.05);
+        border-radius: 0.5rem;
+    }
+
+    .feature-item i {
+        margin-top: 0.25rem;
+        flex-shrink: 0;
+    }
+
+    .feature-item span {
+        line-height: 1.4;
+    }
+
+    .channels-badge .badge {
+        font-size: 0.9rem;
+        padding: 0.5rem 1rem;
+    }
+
+    /* Timeline styles */
+    .timeline {
+        position: relative;
+        padding: 1rem 0;
+    }
+
+    .timeline::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 1rem;
+        height: 100%;
+        width: 2px;
+        background-color: #e9ecef;
+    }
+
+    .timeline-item {
+        position: relative;
+        padding-left: 3rem;
+        padding-bottom: 2rem;
+    }
+
+    .timeline-item:last-child {
+        padding-bottom: 0;
+    }
+
+    .timeline-marker {
+        position: absolute;
+        left: 0.35rem;
+        width: 1.3rem;
+        height: 1.3rem;
+        border-radius: 50%;
+        border: 2px solid #fff;
+        box-shadow: 0 0 0 2px #e9ecef;
+    }
+
+    .timeline-marker.bg-primary {
+        box-shadow: 0 0 0 2px var(--bs-primary);
+    }
+
+    .timeline-content {
+        background-color: #fff;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    /* Fade effect for long feature lists */
+    .features-list::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 40px;
+        background: linear-gradient(to bottom, transparent, white);
+        pointer-events: none;
+    }
+
+    /* Current plan highlight */
+    .plan-card.border-primary {
+        border-width: 2px;
+    }
+</style>
 {% endblock %} 

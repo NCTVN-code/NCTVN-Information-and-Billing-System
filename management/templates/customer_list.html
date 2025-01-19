@@ -19,108 +19,68 @@
             <h6 class="m-0 font-weight-bold text-primary">Customer List</h6>
         </div>
         <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-bordered datatable" width="100%" cellspacing="0">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Phone</th>
-                            <th>Plan</th>
-                            <th>Status</th>
-                            <th>Join Date</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for customer in customers %}
-                        <tr>
-                            <td>{{ customer.user.get_full_name }}</td>
-                            <td>{{ customer.user.email }}</td>
-                            <td>{{ customer.phone }}</td>
-                            <td>
-                                {% if customer.plan %}
-                                    {{ customer.plan.name }}
-                                {% else %}
-                                    <span class="text-muted">No Plan</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <span class="badge {% if customer.status == 'approved' %}bg-success
-                                           {% elif customer.status == 'pending' %}bg-warning
-                                           {% elif customer.status == 'rejected' %}bg-danger
-                                           {% else %}bg-secondary{% endif %}">
-                                    {{ customer.get_status_display }}
-                                </span>
-                            </td>
-                            <td>{{ customer.application_date|date:"M d, Y" }}</td>
-                            <td>
-                                <div class="btn-group">
-                                    <a href="{% url 'customer_detail' customer_id=customer.id %}" 
-                                       class="btn btn-sm btn-info" title="View Details">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                    <a href="{% url 'customer_edit' customer_id=customer.id %}" 
-                                       class="btn btn-sm btn-primary" title="Edit Customer">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    <a href="{% url 'customer_delete' customer_id=customer.id %}" 
-                                       class="btn btn-sm btn-danger" title="Delete Customer">
-                                        <i class="fas fa-trash"></i>
-                                    </a>
-                                    {% if customer.status == 'pending' and customer.plan %}
-                                    <a href="{% url 'customer_application' customer_id=customer.id %}" 
-                                       class="btn btn-sm btn-warning" title="Review Application">
-                                        <i class="fas fa-clipboard-check"></i>
-                                    </a>
-                                    {% endif %}
-                                </div>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="7" class="text-center py-4">
-                                <div class="text-muted">
-                                    <i class="fas fa-users fa-2x mb-3"></i>
-                                    <p class="mb-0">No customers found.</p>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <!-- Tabs -->
+            <ul class="nav nav-tabs" id="customerTabs" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active" id="pending-tab" data-bs-toggle="tab" href="#pending" role="tab">
+                        Pending <span class="badge bg-warning text-dark">{{ pending_count }}</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="approved-tab" data-bs-toggle="tab" href="#approved" role="tab">
+                        Approved <span class="badge bg-success">{{ approved_count }}</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="rejected-tab" data-bs-toggle="tab" href="#rejected" role="tab">
+                        Rejected <span class="badge bg-danger">{{ rejected_count }}</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="disconnected-tab" data-bs-toggle="tab" href="#disconnected" role="tab">
+                        Disconnected <span class="badge bg-secondary">{{ disconnected_count }}</span>
+                    </a>
+                </li>
+            </ul>
+
+            <!-- Tab Content -->
+            <div class="tab-content mt-4" id="customerTabContent">
+                <!-- Pending Customers -->
+                <div class="tab-pane fade show active" id="pending" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table table-bordered datatable" width="100%" cellspacing="0">
+                            {% include "customer_table.html" with customers=pending_customers status="pending" %}
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Approved Customers -->
+                <div class="tab-pane fade" id="approved" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table table-bordered datatable" width="100%" cellspacing="0">
+                            {% include "customer_table.html" with customers=approved_customers status="approved" %}
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Rejected Customers -->
+                <div class="tab-pane fade" id="rejected" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table table-bordered datatable" width="100%" cellspacing="0">
+                            {% include "customer_table.html" with customers=rejected_customers status="rejected" %}
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Disconnected Customers -->
+                <div class="tab-pane fade" id="disconnected" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table table-bordered datatable" width="100%" cellspacing="0">
+                            {% include "customer_table.html" with customers=disconnected_customers status="disconnected" %}
+                        </table>
+                    </div>
+                </div>
             </div>
-            
-            <!-- Pagination -->
-            {% if customers.has_other_pages %}
-            <nav aria-label="Page navigation" class="mt-4">
-                <ul class="pagination justify-content-center">
-                    {% if customers.has_previous %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ customers.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_plan %}&plan={{ selected_plan }}{% endif %}" aria-label="Previous">
-                            <span aria-hidden="true">&laquo;</span>
-                        </a>
-                    </li>
-                    {% endif %}
-                    
-                    {% for num in customers.paginator.page_range %}
-                    <li class="page-item {% if customers.number == num %}active{% endif %}">
-                        <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_plan %}&plan={{ selected_plan }}{% endif %}">
-                            {{ num }}
-                        </a>
-                    </li>
-                    {% endfor %}
-                    
-                    {% if customers.has_next %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ customers.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_plan %}&plan={{ selected_plan }}{% endif %}" aria-label="Next">
-                            <span aria-hidden="true">&raquo;</span>
-                        </a>
-                    </li>
-                    {% endif %}
-                </ul>
-            </nav>
-            {% endif %}
         </div>
     </div>
 </div>
@@ -129,14 +89,11 @@
 {% block extra_js %}
 <script>
 $(document).ready(function() {
-    // Initialize DataTable
-    initializeDataTable('.datatable', {
-        order: [[5, "desc"]] // Sort by join date by default
-    });
-
-    // Auto-submit form when filters change
-    $('#status, #plan').change(function() {
-        $(this).closest('form').submit();
+    // Initialize DataTable for each tab
+    $('.datatable').each(function() {
+        initializeDataTable(this, {
+            order: [[4, "desc"]] // Sort by join date by default
+        });
     });
 });
 </script>
@@ -148,13 +105,17 @@ $(document).ready(function() {
         margin-right: 2px;
     }
     
-    .badge {
-        font-size: 85%;
-        padding: 0.4em 0.6em;
+    .nav-tabs .nav-link {
+        color: #4e73df;
     }
     
-    .table td {
-        vertical-align: middle;
+    .nav-tabs .nav-link.active {
+        color: #2e59d9;
+        font-weight: bold;
+    }
+    
+    .badge {
+        margin-left: 5px;
     }
 </style>
 {% endblock %} 

@@ -95,7 +95,7 @@
                                 <tr>
                                     <td>{{ bill.bill_date|date:"M d, Y" }}</td>
                                     <td>{{ bill.due_date|date:"M d, Y" }}</td>
-                                    <td>${{ bill.amount|floatformat:2 }}</td>
+                                    <td>₱{{ bill.amount|floatformat:2 }}</td>
                                     <td>
                                         <span class="badge {% if bill.status == 'paid' %}bg-success
                                             {% elif bill.status == 'unpaid' %}bg-warning
@@ -142,7 +142,7 @@
                                 {% for payment in payments %}
                                 <tr>
                                     <td>{{ payment.payment_date|date:"M d, Y" }}</td>
-                                    <td>${{ payment.amount|floatformat:2 }}</td>
+                                    <td>₱{{ payment.amount|floatformat:2 }}</td>
                                     <td>{{ payment.payment_method|title }}</td>
                                     <td>{{ payment.transaction_id }}</td>
                                 </tr>

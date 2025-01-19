@@ -166,13 +166,33 @@ def dashboard(request):
 def plan_list(request):
     # Get all plans in one query
     plans = CablePlan.objects.all().order_by('price')
+    current_plan = None
+    plan_history = []
     
     try:
         # Get customer with plan in one query
         customer = Customer.objects.select_related('plan').get(user=request.user)
         current_plan = customer.plan  # No additional query needed
+        
+        # Get plan history from customer's JSON field
+        plan_history = customer.previous_plans[:5] if customer.previous_plans else []
+        
+        # Add current plan to history list for display
+        if current_plan:
+            current_plan_entry = {
+                'plan_id': current_plan.id,
+                'plan_name': current_plan.name,
+                'price': str(current_plan.price),
+                'channels': current_plan.channels,
+                'start_date': customer.plan_start_date.isoformat(),
+                'end_date': None,
+                'reason': customer.plan_change_reason,
+                'status': customer.status  # Add status for current plan
+            }
+            plan_history.insert(0, current_plan_entry)
+            
     except Customer.DoesNotExist:
-        current_plan = None
+        pass
 
     # Process features for each plan
     for plan in plans:
@@ -180,7 +200,8 @@ def plan_list(request):
 
     context = {
         'plans': plans,
-        'current_plan': current_plan
+        'current_plan': current_plan,
+        'plan_history': plan_history
     }
     return render(request, 'subscriber/plan_list.html', context)
 
@@ -212,6 +233,24 @@ def plan_detail(request, plan_id):
 def plan_apply(request, plan_id):
     plan = get_object_or_404(CablePlan, id=plan_id)
     customer = get_object_or_404(Customer, user=request.user)
+    current_plan = customer.plan  # Get current plan
+
+    # Get plan history
+    plan_history = customer.previous_plans[:5] if customer.previous_plans else []
+    
+    # Add current plan to history list for display
+    if current_plan:
+        current_plan_entry = {
+            'plan_id': current_plan.id,
+            'plan_name': current_plan.name,
+            'price': str(current_plan.price),
+            'channels': current_plan.channels,
+            'start_date': customer.plan_start_date.isoformat(),
+            'end_date': None,
+            'reason': customer.plan_change_reason,
+            'status': customer.status  # Add status for current plan
+        }
+        plan_history.insert(0, current_plan_entry)
 
     # Process features for current plan
     plan.feature_list = plan.features.split('\n') if plan.features else []
@@ -222,6 +261,11 @@ def plan_apply(request, plan_id):
         installation_date = request.POST.get('installation_date')
         installation_time = request.POST.get('installation_time')
         installation_notes = request.POST.get('installation_notes')
+        reason = request.POST.get('change_reason', '')
+
+        # Add current plan to history before changing
+        if current_plan:
+            customer.add_to_plan_history(current_plan, reason)
 
         # Update customer info
         customer.plan = plan
@@ -230,6 +274,7 @@ def plan_apply(request, plan_id):
         customer.installation_date = installation_date
         customer.installation_time = installation_time
         customer.installation_notes = installation_notes
+        customer.plan_change_reason = reason
         customer.save()
 
         # Send email to management
@@ -248,6 +293,7 @@ INSTALLATION
 Schedule: {installation_date} at {installation_time}
 Location: {installation_address}
 Notes: {installation_notes}
+Reason for Change: {reason}
 
 --
 Kabacan Northwest Cable TV Network"""
@@ -267,7 +313,9 @@ Kabacan Northwest Cable TV Network"""
     context = {
         'plan': plan,
         'customer': customer,
-        'min_installation_date': timezone.now().date() + timezone.timedelta(days=1)
+        'current_plan': current_plan,  # Add current_plan to context
+        'min_installation_date': timezone.now().date() + timezone.timedelta(days=1),
+        'plan_history': plan_history
     }
     return render(request, 'subscriber/plan_apply.html', context)
 

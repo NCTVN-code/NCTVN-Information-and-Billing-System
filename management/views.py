@@ -257,8 +257,27 @@ def admin_dashboard(request):
 # Customer Management Views
 @login_required(login_url='admin_login')
 def customer_list(request):
+    # Get all customers with related data in a single query
     customers = Customer.objects.select_related('user', 'plan').all()
-    return render(request, 'customer_list.html', {'customers': customers})
+    
+    # Separate customers by status
+    pending_customers = customers.filter(status='pending')
+    approved_customers = customers.filter(status='approved')
+    rejected_customers = customers.filter(status='rejected')
+    disconnected_customers = customers.filter(status='disconnected')
+    
+    context = {
+        'pending_customers': pending_customers,
+        'approved_customers': approved_customers,
+        'rejected_customers': rejected_customers,
+        'disconnected_customers': disconnected_customers,
+        'total_customers': customers.count(),
+        'pending_count': pending_customers.count(),
+        'approved_count': approved_customers.count(),
+        'rejected_count': rejected_customers.count(),
+        'disconnected_count': disconnected_customers.count(),
+    }
+    return render(request, 'customer_list.html', context)
 
 
 @login_required(login_url='admin_login')
